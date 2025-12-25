@@ -29,6 +29,7 @@ class WebController(Controller):
     path = "/"
     exception_handlers = exceptions.exception_handler
     include_in_schema = False
+    opt = {"exclude_from_auth": True}
 
     @get(path=["/", "{path:path}"])
     async def permalink(
