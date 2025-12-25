@@ -3,14 +3,6 @@
 import { z } from 'zod';
 
 /**
- * ArticleCreateResultSchema
- */
-export const articleCreateResultSchema = z.object({
-    message: z.string(),
-    count: z.int()
-});
-
-/**
  * CategoryCreateSchema
  */
 export const categoryCreateSchema = z.object({
@@ -285,12 +277,20 @@ export const publishStatus = z.enum([
 export const articleCreateSchema = z.object({
     title: z.string().min(1).max(255),
     category_ids: z.array(z.uuid()).min(1),
-    content: z.string().min(1),
+    text: z.string().min(1),
     description: z.optional(z.union([
         z.string(),
         z.null()
     ])),
     cover_url: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    source: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    author: z.optional(z.union([
         z.string(),
         z.null()
     ])),
@@ -332,7 +332,7 @@ export const articleUpdateSchema = z.object({
         z.uuid(),
         z.null()
     ])),
-    content: z.optional(z.union([
+    text: z.optional(z.union([
         z.string(),
         z.null()
     ])),
@@ -341,6 +341,14 @@ export const articleUpdateSchema = z.object({
         z.null()
     ])),
     cover_url: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    source: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    author: z.optional(z.union([
         z.string(),
         z.null()
     ])),
@@ -740,6 +748,14 @@ export const articleLiteSchema = z.object({
         z.string(),
         z.null()
     ])),
+    source: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    author: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
     status: publishStatus,
     views: z.int(),
     published_at: z.optional(z.union([
@@ -769,6 +785,14 @@ export const articleSchema = z.object({
         z.string(),
         z.null()
     ])),
+    source: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    author: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
     status: publishStatus,
     views: z.int(),
     published_at: z.optional(z.union([
@@ -781,7 +805,7 @@ export const articleSchema = z.object({
     category: categoryLiteSchema,
     creator_id: z.uuid(),
     creator: userLiteSchema,
-    content: z.string(),
+    text: z.string(),
     tags: z.array(tagLiteSchema),
     specials: z.array(specialLiteSchema),
     features: z.array(featureLiteSchema)
@@ -915,6 +939,14 @@ export const articleSchemaWritable = z.object({
         z.string(),
         z.null()
     ])),
+    source: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    author: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
     status: publishStatus,
     views: z.int(),
     published_at: z.optional(z.union([
@@ -927,7 +959,7 @@ export const articleSchemaWritable = z.object({
     category: categoryLiteSchema,
     creator_id: z.uuid(),
     creator: userLiteSchema,
-    content: z.string(),
+    text: z.string(),
     tags: z.array(tagLiteSchemaWritable),
     specials: z.array(specialLiteSchemaWritable),
     features: z.array(featureLiteSchema)
@@ -1622,11 +1654,6 @@ export const zApiArticlesCreateArticleData = z.object({
     path: z.optional(z.never()),
     query: z.optional(z.never())
 });
-
-/**
- * Document created, URL follows
- */
-export const zApiArticlesCreateArticleResponse = articleCreateResultSchema;
 
 export const zApiArticlesItemIdDeleteArticleData = z.object({
     body: z.optional(z.never()),

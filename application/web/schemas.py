@@ -69,8 +69,9 @@ class ArticleLite(BaseModel):
     url: str
     title: str
     views: int
-    content: str
     cover_url: str | None = None
+    source: str | None = None
+    author: str | None = None
     description: str | None = None
     published_at: datetime.datetime | None = None
 
@@ -84,6 +85,7 @@ class Article(ArticleLite):
     文章详情，包含完整的关联信息
     """
 
+    text: str
     specials: list[Special]
     features: list[Feature]
     tags: list[Tag]

@@ -18,6 +18,6 @@ class Article(ContentBase):
     Article (文章) 模型
     """
 
-    content: Mapped[str] = mapped_column(
+    text: Mapped[str] = mapped_column(
         Text().with_variant(MEDIUMTEXT, "mysql", "mariadb")
     )

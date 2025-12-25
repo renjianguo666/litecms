@@ -17,7 +17,7 @@ from .enums import PublishStatus
 
 if TYPE_CHECKING:
     from application.accounts.models import User
-    from application.taxonomies.models import Category, Feature, Tag, Special
+    from application.taxonomies.models import Category, Feature, Special, Tag
 
 
 class Content(UUIDv7AuditBase):
@@ -51,7 +51,8 @@ class Content(UUIDv7AuditBase):
     description: Mapped[str | None] = mapped_column(String(500))
 
     cover_url: Mapped[str | None] = mapped_column(String(255))
-    # --- 3. 核心关系 ---
+    source: Mapped[str | None] = mapped_column(String(200))
+    author: Mapped[str | None] = mapped_column(String(100))
 
     creator_id: Mapped[UUID] = mapped_column(
         ForeignKey("accounts_users.id", ondelete="RESTRICT"),

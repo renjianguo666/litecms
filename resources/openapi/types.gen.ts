@@ -5,14 +5,6 @@ export type ClientOptions = {
 };
 
 /**
- * ArticleCreateResultSchema
- */
-export type ArticleCreateResultSchema = {
-    message: string;
-    count: number;
-};
-
-/**
  * ArticleCreateSchema
  */
 export type ArticleCreateSchema = {
@@ -27,7 +19,7 @@ export type ArticleCreateSchema = {
     /**
      * 文章内容
      */
-    content: string;
+    text: string;
     /**
      * 文章摘要
      */
@@ -36,6 +28,14 @@ export type ArticleCreateSchema = {
      * 封面图片URL
      */
     cover_url?: string | null;
+    /**
+     * 文章来源
+     */
+    source?: string | null;
+    /**
+     * 作者
+     */
+    author?: string | null;
     /**
      * 发布状态
      */
@@ -71,6 +71,8 @@ export type ArticleLiteSchema = {
     url: string;
     description?: string | null;
     cover_url?: string | null;
+    source?: string | null;
+    author?: string | null;
     status: PublishStatus;
     views: number;
     published_at?: string | null;
@@ -91,6 +93,8 @@ export type ArticleSchema = {
     url: string;
     description?: string | null;
     cover_url?: string | null;
+    source?: string | null;
+    author?: string | null;
     status: PublishStatus;
     views: number;
     published_at?: string | null;
@@ -100,7 +104,7 @@ export type ArticleSchema = {
     category: CategoryLiteSchema;
     creator_id: string;
     creator: UserLiteSchema;
-    content: string;
+    text: string;
     tags: Array<TagLiteSchema>;
     specials: Array<SpecialLiteSchema>;
     features: Array<FeatureLiteSchema>;
@@ -121,7 +125,7 @@ export type ArticleUpdateSchema = {
     /**
      * 文章内容
      */
-    content?: string | null;
+    text?: string | null;
     /**
      * 文章摘要
      */
@@ -130,6 +134,14 @@ export type ArticleUpdateSchema = {
      * 封面图片URL
      */
     cover_url?: string | null;
+    /**
+     * 文章来源
+     */
+    source?: string | null;
+    /**
+     * 作者
+     */
+    author?: string | null;
     /**
      * 发布状态
      */
@@ -783,6 +795,8 @@ export type ArticleSchemaWritable = {
     url: string;
     description?: string | null;
     cover_url?: string | null;
+    source?: string | null;
+    author?: string | null;
     status: PublishStatus;
     views: number;
     published_at?: string | null;
@@ -792,7 +806,7 @@ export type ArticleSchemaWritable = {
     category: CategoryLiteSchema;
     creator_id: string;
     creator: UserLiteSchema;
-    content: string;
+    text: string;
     tags: Array<TagLiteSchemaWritable>;
     specials: Array<SpecialLiteSchemaWritable>;
     features: Array<FeatureLiteSchema>;
@@ -2515,10 +2529,8 @@ export type ApiArticlesCreateArticleResponses = {
     /**
      * Document created, URL follows
      */
-    201: ArticleCreateResultSchema;
+    201: unknown;
 };
-
-export type ApiArticlesCreateArticleResponse = ApiArticlesCreateArticleResponses[keyof ApiArticlesCreateArticleResponses];
 
 export type ApiArticlesItemIdDeleteArticleData = {
     body?: never;

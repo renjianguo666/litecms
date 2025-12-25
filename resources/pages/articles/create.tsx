@@ -7,10 +7,11 @@ import ArticleForm from "./components/form";
 const defaultValues: ArticleCreateFormValues = {
   title: "",
   category_ids: [],
-  content: "",
+  text: "",
   description: "",
   cover_url: "",
-  status: "draft",
+  source: "",
+  author: "",
   tag_ids: [],
   special_ids: [],
   feature_ids: [],

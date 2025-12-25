@@ -33,8 +33,8 @@ interface EditModeProps {
 type ArticleFormProps = CreateModeProps | EditModeProps;
 
 export default function ArticleForm(props: ArticleFormProps) {
-  // 生成 upload_token，整个编辑会话共享
-  const uploadToken = crypto.randomUUID();
+  // 生成 upload_token
+  const uploadToken = Math.random().toString(36).slice(2) + Date.now().toString(36);
 
   // 获取栏目列表
   const [categories] = createResource(async () => {
@@ -142,7 +142,7 @@ export default function ArticleForm(props: ArticleFormProps) {
             {/* 标题 */}
             <form.StringField name="title" placeholder="请输入文章标题" />
             <form.EditorField
-              name="content"
+              name="text"
               label="文章内容"
               placeholder="请输入文章内容..."
               minHeight="400px"
@@ -168,6 +168,18 @@ export default function ArticleForm(props: ArticleFormProps) {
                 label="封面图片"
                 placeholder="请输入封面图片URL（可选）"
               />
+              <div class="grid grid-cols-2 gap-4">
+                <form.StringField
+                  name="source"
+                  label="来源"
+                  placeholder="文章来源（可选）"
+                />
+                <form.StringField
+                  name="author"
+                  label="作者"
+                  placeholder="作者名称（可选）"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -214,7 +226,9 @@ export default function ArticleForm(props: ArticleFormProps) {
           <form.AppField name="published_at">
             {(field) => (
               <div class="flex items-center gap-2">
-                <label class="text-sm font-medium whitespace-nowrap">发布时间</label>
+                <label class="text-sm font-medium whitespace-nowrap">
+                  发布时间
+                </label>
                 <input
                   type="datetime-local"
                   class="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"

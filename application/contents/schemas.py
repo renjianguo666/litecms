@@ -8,8 +8,8 @@ from application.contents.enums import PublishStatus
 from application.taxonomies.schemas import (
     CategoryLiteSchema,
     FeatureLiteSchema,
-    TagLiteSchema,
     SpecialLiteSchema,
+    TagLiteSchema,
 )
 
 
@@ -22,6 +22,8 @@ class ContentLiteSchema(BaseModel):
     url: str
     description: str | None = None
     cover_url: str | None = None
+    source: str | None = None
+    author: str | None = None
     status: PublishStatus
     views: int
     published_at: datetime | None = None

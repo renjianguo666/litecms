@@ -15,7 +15,6 @@ from application.guards import PermissionGuard
 
 from .models import Article
 from .schemas import (
-    ArticleCreateResultSchema,
     ArticleCreateSchema,
     ArticleLiteSchema,
     ArticleSchema,
@@ -93,9 +92,8 @@ class ArticleController(Controller):
         service: ArticleService,
         current_user: User,
         data: ArticleCreateSchema,
-    ) -> ArticleCreateResultSchema:
-        models = await service.create_many_for_categories(data, creator=current_user)
-        return ArticleCreateResultSchema(message="创建成功", count=len(models))
+    ) -> None:
+        await service.create_many_for_categories(data, creator=current_user)
 
     @patch("{item_id:uuid}", guards=[update_permission])
     async def update_article(

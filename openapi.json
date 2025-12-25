@@ -3834,14 +3834,7 @@
                 "responses": {
                     "201": {
                         "description": "Document created, URL follows",
-                        "headers": {},
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ArticleCreateResultSchema"
-                                }
-                            }
-                        }
+                        "headers": {}
                     },
                     "400": {
                         "description": "Bad request syntax or unsupported method",
@@ -4538,22 +4531,6 @@
     },
     "components": {
         "schemas": {
-            "ArticleCreateResultSchema": {
-                "properties": {
-                    "message": {
-                        "type": "string"
-                    },
-                    "count": {
-                        "type": "integer"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "count",
-                    "message"
-                ],
-                "title": "ArticleCreateResultSchema"
-            },
             "ArticleCreateSchema": {
                 "properties": {
                     "title": {
@@ -4571,7 +4548,7 @@
                         "minItems": 1,
                         "description": "所属栏目ID列表"
                     },
-                    "content": {
+                    "text": {
                         "type": "string",
                         "minLength": 1,
                         "description": "文章内容"
@@ -4599,6 +4576,30 @@
                         ],
                         "maxLength": 255,
                         "description": "封面图片URL"
+                    },
+                    "source": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "maxLength": 200,
+                        "description": "文章来源"
+                    },
+                    "author": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "maxLength": 100,
+                        "description": "作者"
                     },
                     "status": {
                         "oneOf": [
@@ -4684,7 +4685,7 @@
                 "type": "object",
                 "required": [
                     "category_ids",
-                    "content",
+                    "text",
                     "title"
                 ],
                 "title": "ArticleCreateSchema"
@@ -4712,6 +4713,26 @@
                         ]
                     },
                     "cover_url": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "source": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "author": {
                         "oneOf": [
                             {
                                 "type": "string"
@@ -4809,6 +4830,26 @@
                             }
                         ]
                     },
+                    "source": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "author": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
                     "status": {
                         "$ref": "#/components/schemas/PublishStatus"
                     },
@@ -4848,7 +4889,7 @@
                     "creator": {
                         "$ref": "#/components/schemas/UserLiteSchema"
                     },
-                    "content": {
+                    "text": {
                         "type": "string"
                     },
                     "tags": {
@@ -4874,7 +4915,6 @@
                 "required": [
                     "category",
                     "category_id",
-                    "content",
                     "created_at",
                     "creator",
                     "creator_id",
@@ -4883,6 +4923,7 @@
                     "specials",
                     "status",
                     "tags",
+                    "text",
                     "title",
                     "updated_at",
                     "url",
@@ -4917,7 +4958,7 @@
                         ],
                         "description": "所属栏目ID"
                     },
-                    "content": {
+                    "text": {
                         "oneOf": [
                             {
                                 "type": "string"
@@ -4952,6 +4993,30 @@
                         ],
                         "maxLength": 255,
                         "description": "封面图片URL"
+                    },
+                    "source": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "maxLength": 200,
+                        "description": "文章来源"
+                    },
+                    "author": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "maxLength": 100,
+                        "description": "作者"
                     },
                     "status": {
                         "oneOf": [

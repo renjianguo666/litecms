@@ -35,9 +35,11 @@ export default function EditArticle() {
         defaultValues={{
           title: articleData()!.title,
           category_id: articleData()!.category_id,
-          content: articleData()!.content,
+          text: articleData()!.text,
           description: articleData()!.description ?? "",
           cover_url: articleData()!.cover_url ?? "",
+          source: articleData()!.source ?? "",
+          author: articleData()!.author ?? "",
           status: articleData()!.status,
           published_at: articleData()!.published_at,
           tag_ids: articleData()!.tags?.map((t) => t.id) ?? [],

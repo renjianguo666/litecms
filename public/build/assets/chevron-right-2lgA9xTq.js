@@ -1,1 +1,0 @@
-import{I as e}from"./main-dmt7HXak.js";import{b as o,m as a}from"./vendor-ui-EoCh-MHn.js";var t=[["path",{d:"m9 18 6-6-6-6",key:"mthhwq"}]],m=r=>o(e,a(r,{iconNode:t,name:"chevron-right"})),c=m;export{c};

@@ -23,6 +23,8 @@ class ArticleLiteSchema(BaseModel):
     url: str
     description: str | None = None
     cover_url: str | None = None
+    source: str | None = None
+    author: str | None = None
     status: PublishStatus
     views: int
     published_at: datetime | None = None
@@ -36,19 +38,10 @@ class ArticleLiteSchema(BaseModel):
 
 
 class ArticleSchema(ArticleLiteSchema):
-    content: str
+    text: str
     tags: list[TagLiteSchema]
     specials: list[SpecialLiteSchema]
     features: list[FeatureLiteSchema]
-
-
-class ArticleCreateResultSchema(BaseModel):
-    """创建文章返回结果"""
-
-    model_config = ConfigDict(frozen=True)
-
-    message: str
-    count: int
 
 
 class ArticleCreateSchema(BaseModel):
@@ -59,7 +52,7 @@ class ArticleCreateSchema(BaseModel):
     # 必填字段
     title: str = Field(..., min_length=1, max_length=255, description="文章标题")
     category_ids: list[UUID] = Field(..., min_length=1, description="所属栏目ID列表")
-    content: str = Field(..., min_length=1, description="文章内容")
+    text: str = Field(..., min_length=1, description="文章内容")
 
     description: str | None = Field(
         default=None, max_length=500, description="文章摘要"
@@ -67,6 +60,8 @@ class ArticleCreateSchema(BaseModel):
     cover_url: str | None = Field(
         default=None, max_length=255, description="封面图片URL"
     )
+    source: str | None = Field(default=None, max_length=200, description="文章来源")
+    author: str | None = Field(default=None, max_length=100, description="作者")
     status: PublishStatus | None = Field(default=None, description="发布状态")
     published_at: datetime | None = Field(
         default=None, description="发布时间，留空则使用当前时间"
@@ -92,7 +87,7 @@ class ArticleUpdateSchema(BaseModel):
         default=None, min_length=1, max_length=255, description="文章标题"
     )
     category_id: UUID | None = Field(default=None, description="所属栏目ID")
-    content: str | None = Field(default=None, min_length=1, description="文章内容")
+    text: str | None = Field(default=None, min_length=1, description="文章内容")
 
     description: str | None = Field(
         default=None, max_length=500, description="文章摘要"
@@ -100,6 +95,8 @@ class ArticleUpdateSchema(BaseModel):
     cover_url: str | None = Field(
         default=None, max_length=255, description="封面图片URL"
     )
+    source: str | None = Field(default=None, max_length=200, description="文章来源")
+    author: str | None = Field(default=None, max_length=100, description="作者")
     status: PublishStatus | None = Field(default=None, description="发布状态")
     published_at: datetime | None = Field(default=None, description="发布时间")
     tag_ids: list[UUID] | None = Field(default=None, description="标签ID列表")
