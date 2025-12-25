@@ -1,0 +1,16 @@
+[Unit]
+Description=Myshop Application
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/myshop
+Environment="PATH=/var/www/myshop/.venv/bin"
+ExecStart=/var/www/myshop/.venv/bin/serve
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

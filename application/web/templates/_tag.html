@@ -1,0 +1,109 @@
+{% extends "_base.html" %}
+
+{% block title %}#{{ tag.name }} - 话题聚合{% endblock %}
+{% block description %}关于 #{{ tag.name }} 的最新资讯与深度文章聚合。{% endblock %}
+
+{% block content %}
+<div class="bg-slate-50 border-b border-slate-200">
+    <div class="container-custom py-16 flex flex-col items-center justify-center text-center">
+        <div
+            class="size-12 bg-white rounded-full flex items-center justify-center shadow-sm text-brand-600 mb-4 border border-slate-100">
+            <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+            </svg>
+        </div>
+
+        <h1 class="text-4xl md:text-5xl font-serif font-black text-slate-900 mb-3 tracking-tight">
+            <span class="text-brand-600 mr-1">#</span>{{ tag.name }}
+        </h1>
+
+        <p class="text-slate-500 font-medium">
+            共收录 {{ total_count }} 篇相关文章
+        </p>
+    </div>
+</div>
+
+<div class="container-custom py-12">
+
+    {% if articles %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-12 mb-16">
+        {% for post in articles %}
+        <article class="flex flex-col group h-full">
+            <a href="/article/{{ post.id }}"
+                class="block overflow-hidden rounded-xl bg-slate-100 aspect-[3/2] mb-5 relative">
+                <img src="{{ post.image }}" alt="{{ post.title }}"
+                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300"></div>
+            </a>
+
+            <div class="flex-1 flex flex-col">
+                <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-2">
+                    <a href="/category/{{ post.category_slug }}"
+                        class="text-brand-600 hover:text-brand-800 transition-colors">
+                        {{ post.category_name }}
+                    </a>
+                    <span class="text-slate-300">•</span>
+                    <span class="text-slate-400 font-normal normal-case">{{ post.created_at_fmt }}</span>
+                </div>
+
+                <h2
+                    class="text-xl font-bold text-slate-900 font-serif leading-snug mb-3 group-hover:text-brand-600 transition-colors">
+                    <a href="/article/{{ post.id }}">
+                        {{ post.title }}
+                    </a>
+                </h2>
+
+                <p class="text-slate-600 text-sm leading-relaxed line-clamp-3 mb-4 flex-grow">
+                    {{ post.summary }}
+                </p>
+
+                <div class="flex items-center gap-2 mt-auto pt-4 border-t border-slate-100">
+                    <img src="https://ui-avatars.com/api/?name={{ post.author }}"
+                        class="size-6 rounded-full bg-slate-200">
+                    <span class="text-xs font-medium text-slate-500">{{ post.author }}</span>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="flex justify-center items-center gap-2 border-t border-slate-200 pt-12">
+        <a href="?page={{ current_page - 1 }}"
+            class="flex items-center justify-center px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed {% if current_page == 1 %}pointer-events-none opacity-50{% endif %}">
+            上一页
+        </a>
+
+        <span class="text-sm text-slate-500 px-2">
+            第 <span class="font-bold text-slate-900">{{ current_page }}</span> 页，共 {{ total_pages }} 页
+        </span>
+
+        <a href="?page={{ current_page + 1 }}"
+            class="flex items-center justify-center px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 {% if current_page == total_pages %}pointer-events-none opacity-50{% endif %}">
+            下一页
+        </a>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-24">
+        <div class="inline-flex items-center justify-center size-16 rounded-full bg-slate-100 text-slate-400 mb-4">
+            <svg class="size-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+        </div>
+        <h3 class="mt-2 text-lg font-medium text-slate-900">暂无相关文章</h3>
+        <p class="mt-1 text-sm text-slate-500">该标签下暂时没有收录任何内容。</p>
+        <div class="mt-6">
+            <a href="/"
+                class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-800 focus:outline-none">
+                返回首页
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "_base.html" %}
+
+{% block title %}{{ article.title }}{% endblock %}
+{% block description %}{{ article.summary }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_image %}{{ article.image }}{% endblock %}
+
+{% block content %}
+<div class="fixed top-0 left-0 h-1 bg-brand-600 z-[60] w-0 transition-all duration-100" id="progress-bar"></div>
+
+<article>
+    <header class="container-custom max-w-4xl py-12 text-center">
+        <nav class="flex justify-center items-center gap-2 text-sm text-slate-500 mb-6">
+            <a href="/" class="hover:text-brand-600">首页</a>
+            <span>/</span>
+            <a href="{{ article.category.url }}" class="hover:text-brand-600">{{ article.category.name }}</a>
+        </nav>
+
+        <h1 class="text-3xl md:text-5xl font-serif font-black text-slate-900 mb-6 leading-tight">
+            {{ article.title }}
+        </h1>
+
+        <div class="flex items-center justify-center gap-6 border-y border-slate-100 py-4">
+            <div class="flex items-center gap-3">
+                <img src="https://ui-avatars.com/api/?name={{ article.author }}"
+                    class="size-10 rounded-full bg-slate-100">
+                <div class="text-left">
+                    <div class="text-sm font-bold text-slate-900">{{ article.author }}</div>
+                    <div class="text-xs text-slate-500">资深编辑</div>
+                </div>
+            </div>
+            <div class="text-sm text-slate-500">
+                <time>{{ article.created_at }}</time>
+                <span class="mx-2">•</span>
+                <span>阅读 3.2k</span>
+            </div>
+        </div>
+    </header>
+
+
+
+    <div class="container-custom max-w-3xl">
+        <div class="prose prose-lg prose-slate prose-headings:font-serif prose-a:text-brand-600 max-w-none">
+
+            <p class="lead font-serif text-xl text-slate-600">
+                {{ article.summary }}
+            </p>
+
+            {{ article.content | safe }}
+
+        </div>
+
+        <div class="mt-12 pt-8 border-t border-slate-200">
+            <div class="flex flex-wrap gap-2 mb-8">
+                {% for tag in article.tags %}
+                <a href="/tag/{{ tag.slug }}"
+                    class="px-3 py-1 bg-slate-100 text-slate-600 text-sm rounded-full hover:bg-slate-200 transition">#
+                    {{ tag.name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</article>
+
+<script>
+    // 简单的阅读进度条
+    window.addEventListener('scroll', () => {
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const width = (scrollTop / scrollHeight) * 100;
+        document.getElementById('progress-bar').style.width = width + '%';
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,185 @@
+/* =========================================
+   1. Tiptap 核心交互补丁
+   ========================================= */
+
+/* 去掉编辑器默认的蓝色/黑色轮廓线 */
+.ProseMirror {
+    outline: none;
+}
+
+/* 修复：选中图片或节点时的蓝色边框 */
+.ProseMirror-selectednode {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* =========================================
+   2. 占位符 (Placeholder)
+   ========================================= */
+
+/* prose 插件无法处理这种复杂的伪元素逻辑，必须保留在 CSS 中 */
+.ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    /* 使用 Shadcn 的 muted-foreground 变量 (如果是 hsl 格式请改为 hsl(var(--...))) */
+    color: var(--muted-foreground);
+    pointer-events: none; /* 关键：允许鼠标穿透点击 */
+    height: 0;
+}
+
+/* =========================================
+   3. 链接与特定节点样式
+   ========================================= */
+
+/* 链接自定义样式 - 比 prose 默认的更精致 */
+.ProseMirror a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-decoration-style: dashed; /* 虚线更有设计感 */
+    text-underline-offset: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ProseMirror a:hover {
+    opacity: 0.8;
+    text-decoration-style: solid; /* hover 时变实线 */
+}
+
+/* 强制图片自适应，防止撑破容器 */
+.ProseMirror img {
+    max-width: 100%;
+    height: auto;
+    display: inline-block; /* 配合 text-align 生效 */
+}
+
+/* 任务列表 (Task List) - prose 默认不包含这个样式 */
+.ProseMirror ul[data-type="taskList"] {
+    list-style: none;
+    padding: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+    display: flex;
+    align-items: flex-start; /* 顶部对齐 */
+}
+
+.ProseMirror ul[data-type="taskList"] li > label {
+    margin-right: 0.5rem;
+    user-select: none;
+}
+
+/* =========================================
+   4. 视频与 Iframe (保持 16:9 比例)
+   ========================================= */
+
+.ProseMirror .video-wrapper {
+    margin: 1rem 0;
+}
+
+.ProseMirror .video-wrapper video {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius); /* 适配圆角变量 */
+}
+
+/* 经典的 CSS Hack 实现响应式 iframe */
+.ProseMirror .iframe-wrapper {
+    margin: 1rem 0;
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 比例 */
+    height: 0;
+    overflow: hidden;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.ProseMirror .iframe-wrapper iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* =========================================
+   5. 文本对齐兼容
+   ========================================= */
+
+/* 确保行内样式 text-align 能正确生效 */
+.ProseMirror [style*="text-align: left"] {
+    text-align: left;
+}
+.ProseMirror [style*="text-align: center"] {
+    text-align: center;
+}
+.ProseMirror [style*="text-align: right"] {
+    text-align: right;
+}
+.ProseMirror [style*="text-align: justify"] {
+    text-align: justify;
+}
+
+/* =========================================
+   6. Resize Handles (图片/视频缩放手柄)
+   ========================================= */
+
+/* 容器：必须是 inline-flex 以贴合内容 */
+[data-resize-container] {
+    display: inline-flex !important;
+    position: relative;
+    line-height: 0; /* 防止图片底部产生额外间隙 */
+}
+
+/* 包装器 */
+[data-resize-wrapper] {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+}
+
+/* 手柄基础样式 */
+[data-resize-handle] {
+    position: absolute;
+    background-color: var(--primary);
+    border: 1px solid var(--background); /* 加个白边更好看 */
+    border-radius: 50%; /* 圆形手柄比方形更现代 */
+    z-index: 50;
+    opacity: 0; /* 默认隐藏 */
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
+    width: 10px;
+    height: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 交互：选中或悬停时显示手柄 */
+[data-resize-wrapper]:hover [data-resize-handle],
+[data-resize-container][data-resize-state="true"] [data-resize-handle] {
+    opacity: 1;
+}
+
+/* 四角定位与鼠标样式 */
+[data-resize-handle="top-left"] {
+    top: -5px;
+    left: -5px;
+    cursor: nwse-resize;
+}
+[data-resize-handle="top-right"] {
+    top: -5px;
+    right: -5px;
+    cursor: nesw-resize;
+}
+[data-resize-handle="bottom-left"] {
+    bottom: -5px;
+    left: -5px;
+    cursor: nesw-resize;
+}
+[data-resize-handle="bottom-right"] {
+    bottom: -5px;
+    right: -5px;
+    cursor: nwse-resize;
+}

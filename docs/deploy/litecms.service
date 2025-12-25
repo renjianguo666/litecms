@@ -1,0 +1,16 @@
+[Unit]
+Description=Litecms Application
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/litecms
+Environment="PATH=/var/www/litecms/.venv/bin"
+ExecStart=/var/www/litecms/.venv/bin/serve
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
