@@ -11,10 +11,11 @@ from advanced_alchemy.service import (
     SQLAlchemyAsyncRepositoryService,
     schema_dump,
 )
+from litestar.utils.path import normalize_path
 from advanced_alchemy.service.typing import ModelDictT
 from uuid_utils import uuid7
 
-from application.utils import build_permalink, normalize_path
+from application.utils import build_permalink
 
 from .models import Category, Feature, Tag, Special
 
