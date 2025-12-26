@@ -10,7 +10,7 @@ from uuid import UUID
 
 import msgspec
 from fastnanoid import generate
-from litestar.utils.path import normalize_path
+# from litestar.utils.path import normalize_path
 
 # 占位符 正则
 PLACEHOLDER_RE = re.compile(r"\{([^}]+)\}")
@@ -189,6 +189,8 @@ def build_permalink(rule: str, dt: datetime | None = None, **kwargs) -> str:
                 pass
         return val
 
-    permalink = PLACEHOLDER_RE.sub(replacer, rule)
+    # permalink = PLACEHOLDER_RE.sub(replacer, rule)
 
-    return normalize_path(permalink)
+    # return normalize_path(permalink)
+
+    return PLACEHOLDER_RE.sub(replacer, rule)
