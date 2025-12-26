@@ -39,3 +39,8 @@ storage/*
 !storage/*/
 !storage/*/.gitkeep
 migrations/*
+
+# public 目录只跟踪 build
+public/*
+!public/build/
+!public/.gitkeep
