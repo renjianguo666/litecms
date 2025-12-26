@@ -103,8 +103,8 @@ class WebController(Controller):
             handler = plugin.get_handler(plugin_name)
             if handler:
                 return await handler(request)
-        except Exception as e:
-            print("==============>", e)
+        except Exception:
+            pass
 
         return await utils.render_template(
             request, template_name="_404.html", status_code=HTTP_404_NOT_FOUND

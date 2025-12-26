@@ -7,7 +7,7 @@ from advanced_alchemy.filters import LimitOffset, SearchFilter
 from advanced_alchemy.service import OffsetPagination
 from litestar import Controller, delete, get, patch, post
 from litestar.params import Parameter
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, defer
 
 from application.accounts.models import User
 from application.deps import create_service_provider
@@ -58,12 +58,13 @@ class ArticleController(Controller):
             )
 
         filters.append(limit_offset)
-
-        results, total = await service.list_and_count(
+        total = await service.count(*filters)
+        results = await service.list(
             *filters,
             load=[
                 joinedload(Article.creator),
                 joinedload(Article.category),
+                defer(Article.text),
             ],
             order_by=Article.published_at.desc(),
         )
