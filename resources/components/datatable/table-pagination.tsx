@@ -88,7 +88,7 @@ export default function TablePagination<TData>(
         </div>
 
         {/* 页码信息 */}
-        <div class="flex w-[120px] items-center justify-center text-sm font-medium">
+        <div class="flex w-[130px] items-center justify-center text-sm font-medium">
           第 {props.table.getState().pagination.pageIndex + 1} 页，共{" "}
           {props.table.getPageCount() || 1} 页
         </div>

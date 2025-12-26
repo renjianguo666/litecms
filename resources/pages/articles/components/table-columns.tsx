@@ -37,7 +37,7 @@ export const columns: ColumnDef<ArticleLiteValues>[] = [
           rel="noopener noreferrer"
           class="group inline-flex items-center gap-1 font-medium hover:opacity-70 transition-opacity"
         >
-          <span>{info.getValue() as string}</span>
+          <span class="line-clamp-1">{info.getValue() as string}</span>
           <ExternalLink class="size-3.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
         </a>
       );
