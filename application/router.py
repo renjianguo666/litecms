@@ -46,5 +46,4 @@ route_handlers = [
     create_static_files_router(
         path=config.assets_url, directories=[config.assets_dir], name="assets"
     ),
-    create_static_files_router(path="/", directories=[config.public_dir]),
 ]

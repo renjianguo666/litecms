@@ -22,6 +22,7 @@ from application.taxonomies.services import (
 )
 
 from . import exceptions, schemas, urls, utils
+from .middleware import PathNormalizationMiddleware
 from .plugin import plugin
 
 
@@ -30,6 +31,7 @@ class WebController(Controller):
     exception_handlers = exceptions.exception_handler
     include_in_schema = False
     opt = {"exclude_from_auth": True}
+    middleware = [PathNormalizationMiddleware()]
 
     @get(path=["/", "{path:path}"])
     async def permalink(

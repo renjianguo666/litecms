@@ -11,13 +11,13 @@ from advanced_alchemy.service import (
     SQLAlchemyAsyncRepositoryService,
     schema_dump,
 )
-from litestar.utils.path import normalize_path
 from advanced_alchemy.service.typing import ModelDictT
+from litestar.utils.path import normalize_path
 from uuid_utils import uuid7
 
 from application.utils import build_permalink
 
-from .models import Category, Feature, Tag, Special
+from .models import Category, Feature, Special, Tag
 
 
 class CategoryRepository(SQLAlchemyAsyncRepository[Category]):
@@ -55,7 +55,7 @@ class CategoryService(SQLAlchemyAsyncRepositoryService[Category]):
         else:
             model.trail = str(model.id)
 
-        model.path = self._generate_path(model)
+        model.path = normalize_path(self._generate_path(model))
         model.content_path = normalize_path(model.content_path)
         return model
 
@@ -88,7 +88,7 @@ class CategoryService(SQLAlchemyAsyncRepositoryService[Category]):
 
         # permalink 变化 或 parent_id 变化（影响 {parent} 占位符）都需要重新生成
         if history_path != updated.path or history_parent_id != updated.parent_id:
-            updated.path = self._generate_path(updated)
+            updated.path = normalize_path(self._generate_path(updated))
 
         updated.content_path = normalize_path(updated.content_path)
         await self.repository.session.commit()
