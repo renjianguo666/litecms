@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 
 from litestar import Controller, Request, Response, get
-from litestar.config.response_cache import CACHE_FOREVER
 from litestar.status_codes import HTTP_404_NOT_FOUND
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -191,11 +190,7 @@ class WebController(Controller):
             breadcrumbs=breadcrumbs,
         )
 
-    @get(
-        path=[config.admin_url, f"{config.admin_url}/{{path:path}}"],
-        exclude_from_auth=True,
-        cache=CACHE_FOREVER if not config.debug else False,
-    )
+    @get(path=[config.admin_url, f"{config.admin_url}/{{path:path}}"])
     async def admin_enter(self, request: Request, path: str | None = None) -> Response:
         entry = "resources/main.tsx"
         if config.debug:

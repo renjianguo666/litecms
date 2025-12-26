@@ -322,13 +322,20 @@ function TreeListMulti(props: TreeListMultiProps) {
                       "transition-colors duration-150",
                       disabled() && "opacity-50 cursor-not-allowed",
                       !disabled() &&
-                        isSelected() &&
-                        "bg-primary text-primary-foreground cursor-pointer",
+                      isSelected() &&
+                      "bg-primary text-primary-foreground cursor-pointer",
                       !disabled() &&
-                        !isSelected() &&
-                        "hover:bg-accent hover:text-accent-foreground cursor-pointer",
+                      !isSelected() &&
+                      "hover:bg-accent hover:text-accent-foreground cursor-pointer",
                     )}
-                    onClick={() => !disabled() && toggleSelect(node.id)}
+                    onClick={(e) => {
+                      if (disabled()) return;
+                      if (node.has_children) {
+                        toggleExpand(node.id, e);
+                      } else {
+                        toggleSelect(node.id);
+                      }
+                    }}
                   >
                     {/* Tree Lines */}
                     <div class="flex h-full shrink-0">
@@ -400,19 +407,20 @@ function TreeListMulti(props: TreeListMultiProps) {
                       </button>
                     </Show>
 
-                    {/* Checkbox */}
-                    <div
-                      class={cn(
-                        "w-4 h-4 flex items-center justify-center shrink-0 rounded border",
-                        isSelected()
-                          ? "bg-primary-foreground/20 border-primary-foreground/40"
-                          : "border-muted-foreground/30 group-hover:border-muted-foreground/50",
-                      )}
-                    >
-                      <Show when={isSelected()}>
-                        <Check class="size-3" />
-                      </Show>
-                    </div>
+                    <Show when={!node.has_children}>
+                      <div
+                        class={cn(
+                          "w-4 h-4 flex items-center justify-center shrink-0 rounded border",
+                          isSelected()
+                            ? "bg-primary-foreground/20 border-primary-foreground/40"
+                            : "border-muted-foreground/30 group-hover:border-muted-foreground/50",
+                        )}
+                      >
+                        <Show when={isSelected()}>
+                          <Check class="size-3" />
+                        </Show>
+                      </div>
+                    </Show>
 
                     {/* Folder Icon */}
                     <Show when={local.showIcon !== false}>
