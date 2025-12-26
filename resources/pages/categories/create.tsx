@@ -13,7 +13,7 @@ const defaultValues: CategoryCreateFormValues = {
   cover_url: undefined,
   page_size: 10,
   priority: 0,
-  template: "default",
+  template: null,
   parent_id: null,
   domain: "",
 };

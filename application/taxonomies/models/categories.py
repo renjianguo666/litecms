@@ -42,9 +42,7 @@ class Category(UUIDv7AuditBase):
     # 值越大 越优先
     priority: Mapped[int] = mapped_column(default=0, index=True, comment="优先级排序")
     # 模板
-    template: Mapped[str] = mapped_column(
-        String(100), default="default", comment="模板"
-    )
+    template: Mapped[str | None] = mapped_column(String(100), comment="模板")
     domain: Mapped[str | None] = mapped_column(String(100))
 
     # 1. 自引用外键

@@ -419,7 +419,7 @@ export default function Templates() {
               ref={newFileInputRef}
               id="new-file-name"
               type="text"
-              placeholder="例如: red.category.html"
+              placeholder="例如: red_category.html"
               value={newFileName()}
               onInput={(e) => setNewFileName(e.currentTarget.value)}
               onKeyDown={(e) => {
@@ -428,7 +428,7 @@ export default function Templates() {
               }}
             />
             <span class="text-xs text-muted-foreground">
-              命名格式：{"{name}.{type}.html"}，如 red.category.html、tech.tag.html
+              命名格式例如 red_category.html,red_article.html special_[slug].html,tag_[slug].html
             </span>
           </div>
 
@@ -466,7 +466,7 @@ export default function Templates() {
               ref={renameInputRef}
               id="rename-file-name"
               type="text"
-              placeholder="例如: blue.category.html"
+              placeholder="例如: blue_category.html"
               value={renameFileName()}
               onInput={(e) => setRenameFileName(e.currentTarget.value)}
               onKeyDown={(e) => {

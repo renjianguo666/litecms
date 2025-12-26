@@ -5128,10 +5128,14 @@
                         ]
                     },
                     "template": {
-                        "type": "string",
-                        "maxLength": 255,
-                        "minLength": 1,
-                        "description": "模板"
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
                     },
                     "title": {
                         "oneOf": [
@@ -5211,8 +5215,7 @@
                 "required": [
                     "content_path",
                     "name",
-                    "path",
-                    "template"
+                    "path"
                 ],
                 "title": "CategoryCreateSchema"
             },
@@ -5279,7 +5282,14 @@
                         "type": "integer"
                     },
                     "template": {
-                        "type": "string"
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
                     },
                     "created_at": {
                         "type": "string",
@@ -5333,7 +5343,6 @@
                     "page_size",
                     "path",
                     "priority",
-                    "template",
                     "url"
                 ],
                 "title": "CategoryLiteSchema"
@@ -5401,7 +5410,14 @@
                         "type": "integer"
                     },
                     "template": {
-                        "type": "string"
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
                     },
                     "created_at": {
                         "type": "string",
@@ -5465,7 +5481,6 @@
                     "page_size",
                     "path",
                     "priority",
-                    "template",
                     "url"
                 ],
                 "title": "CategorySchema"

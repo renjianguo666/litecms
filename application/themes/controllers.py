@@ -35,15 +35,11 @@ class TemplateController(Controller):
     async def get_template_options(self, manager: TemplateManager) -> list[str]:
         """获取 category 模板选项列表"""
         files = await manager.list()
-
-        options = [
-            f.removesuffix(".category.html")
+        return [
+            f.removesuffix("_category.html")
             for f in files
-            # 排除默认模板
-            if f.endswith(".category.html") and f != "default.category.html"
+            if f.endswith("_category.html")
         ]
-
-        return ["default", *options]
 
     @get(guards=[view_permission])
     async def list_templates(self, manager: TemplateManager) -> list[str]:

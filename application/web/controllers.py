@@ -68,7 +68,7 @@ class WebController(Controller):
         )
         return await utils.render_template(
             request,
-            template_name=[f"special.{special.slug}.html", "_special.html"],
+            template_name=[f"special_{special.slug}.html", "_special.html"],
             special=special,
             items=pagination.items,
             pagination=pagination,
@@ -90,7 +90,7 @@ class WebController(Controller):
         )
         return await utils.render_template(
             request,
-            template_name=[f"tag.{tag.slug}.html", "_tag.html"],
+            template_name=[f"tag_{tag.slug}.html", "_tag.html"],
             tag=tag,
             items=pagination.items,
             pagination=pagination,
@@ -143,10 +143,7 @@ class WebController(Controller):
 
         return await utils.render_template(
             request,
-            template_name=[
-                f"{category.template}.category.html",
-                "_category.html",
-            ],
+            template_name=f"{category.template or ''}_category.html",
             category=category_schema,
             breadcrumbs=breadcrumb_schema,
             pagination=pagination,
@@ -185,7 +182,7 @@ class WebController(Controller):
         return await utils.render_template(
             request,
             template_name=[
-                f"{article.category.template}.article.html",
+                f"{article.category.template or ''}_article.html",
                 "_article.html",
             ],
             article=data,

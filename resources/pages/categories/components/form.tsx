@@ -186,13 +186,13 @@ export default function CategoryForm(props: CategoryFormProps) {
                 name="path"
                 label="栏目路径"
                 placeholder="如：/category/{key}"
-                description="可用占位符{key}{year}{month}{day}{y}{m}{d}{parent}"
+                description="可用占位符{key}{year}{month}{day}{yy}{mm}{dd}{rnum}{rstr}{parent}"
               />
               <form.StringField
                 name="content_path"
                 label="内容路径"
                 placeholder="如：/p/{key}.html"
-                description="可用占位符{key}{year}{month}{day}{y}{m}{d}{parent}"
+                description="可用占位符{key}{year}{month}{day}{yy}{mm}{dd}{rnum}{rstr}{parent}"
               />
               <form.StringField
                 name="domain"
@@ -226,7 +226,6 @@ export default function CategoryForm(props: CategoryFormProps) {
                 label="模板"
                 placeholder="请选择模板"
                 options={categoryTemplateOptions()}
-                nullable={false}
               />
 
             </div>

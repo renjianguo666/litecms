@@ -9,7 +9,10 @@ export const categoryCreateSchema = z.object({
     name: z.string().min(1).max(100),
     path: z.string().min(1),
     content_path: z.string().min(1),
-    template: z.string().min(1).max(255),
+    template: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
     title: z.optional(z.union([
         z.string(),
         z.null()
@@ -66,7 +69,10 @@ export const categoryLiteSchema = z.object({
     url: z.string(),
     page_size: z.int(),
     priority: z.int(),
-    template: z.string(),
+    template: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
     created_at: z.iso.datetime(),
     updated_at: z.optional(z.union([
         z.iso.datetime(),
@@ -106,7 +112,10 @@ export const categorySchema = z.object({
     url: z.string(),
     page_size: z.int(),
     priority: z.int(),
-    template: z.string(),
+    template: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
     created_at: z.iso.datetime(),
     updated_at: z.optional(z.union([
         z.iso.datetime(),

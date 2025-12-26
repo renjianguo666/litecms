@@ -184,10 +184,7 @@ export type CategoryCreateSchema = {
      * 可用占位符{key}{year}{month}{day}{y}{m}{d}{parent}
      */
     content_path: string;
-    /**
-     * 模板
-     */
-    template: string;
+    template?: string | null;
     title?: string | null;
     description?: string | null;
     cover_url?: string | null;
@@ -211,7 +208,7 @@ export type CategoryLiteSchema = {
     url: string;
     page_size: number;
     priority: number;
-    template: string;
+    template?: string | null;
     created_at: string;
     updated_at?: string | null;
     /**
@@ -239,7 +236,7 @@ export type CategorySchema = {
     url: string;
     page_size: number;
     priority: number;
-    template: string;
+    template?: string | null;
     created_at: string;
     updated_at?: string | null;
     /**

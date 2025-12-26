@@ -153,8 +153,8 @@ def build_permalink(rule: str, dt: datetime | None = None, **kwargs) -> str:
         **kwargs: 数据字段，支持:
             - key: UUID (自动转换为 short id)
             - category: 分类路径
-            - random_number: 随机数字（可选，不传则自动生成）
-            - random_string: 随机字符串（可选，不传则自动生成）
+            - rnum: 随机数字（可选，不传则自动生成）
+            - rstr: 随机字符串（可选，不传则自动生成）
     """
     dt = dt or datetime.now()
 
@@ -171,8 +171,8 @@ def build_permalink(rule: str, dt: datetime | None = None, **kwargs) -> str:
     kwargs.setdefault("dd", dt.strftime("%d"))
 
     # 处理随机字段（懒加载）
-    kwargs.setdefault("random_number", random_number())
-    kwargs.setdefault("random_string", random_string())
+    kwargs.setdefault("rnum", random_number())
+    kwargs.setdefault("rstr", random_string())
 
     # 替换占位符
     def replacer(match):

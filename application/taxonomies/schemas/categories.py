@@ -21,6 +21,10 @@ CONTENT_PATH = Annotated[
     ),
 ]
 NAME = Annotated[str, Field(min_length=1, max_length=100, description="栏目名称")]
+TITLE = Annotated[str, Field(max_length=200)]
+DESCRIPTION = Annotated[str, Field(max_length=500)]
+COVER_URL = Annotated[str, Field(max_length=255)]
+PRIORITY = Annotated[int, Field(description="优先级排序")]
 TEMPLATE = Annotated[str, Field(min_length=1, max_length=255, description="模板")]
 PAGE_SIZE = Annotated[int, Field(ge=1, le=100, description="每页条数")]
 DOMAIN = Annotated[str, Field(max_length=100)]
@@ -41,7 +45,7 @@ class CategoryLiteSchema(BaseModel):
     url: str
     page_size: int
     priority: int
-    template: str
+    template: str | None
     created_at: datetime
     updated_at: datetime | None = None
 
@@ -60,14 +64,14 @@ class CategoryCreateSchema(BaseModel):
     name: NAME
     path: PATH
     content_path: CONTENT_PATH
-    template: TEMPLATE
+    template: TEMPLATE | None = None
 
     # 可选字段 (默认为 None)
-    title: Annotated[str, Field(max_length=200)] | None = None
-    description: Annotated[str, Field(max_length=500)] | None = None
-    cover_url: Annotated[str, Field(max_length=255)] | None = None
+    title: TITLE | None = None
+    description: DESCRIPTION | None = None
+    cover_url: COVER_URL | None = None
     page_size: PAGE_SIZE | None = 15
-    priority: Annotated[int, Field(description="优先级排序")] | None = None
+    priority: PRIORITY | None = None
     parent_id: UUID | None = None
 
     domain: DOMAIN | None = None
@@ -81,11 +85,11 @@ class CategoryUpdateSchema(BaseModel):
     name: NAME | None = None
     path: PATH | None = None
     content_path: CONTENT_PATH | None = None
-    title: Annotated[str, Field(max_length=200)] | None = None
-    description: Annotated[str, Field(max_length=500)] | None = None
-    cover_url: Annotated[str, Field(max_length=255)] | None = None
+    title: TITLE | None = None
+    description: DESCRIPTION | None = None
+    cover_url: COVER_URL | None = None
     page_size: PAGE_SIZE | None = None
-    priority: Annotated[int, Field(description="优先级排序")] | None = None
+    priority: PRIORITY | None = None
     template: TEMPLATE | None = None
     parent_id: UUID | None = None
 
