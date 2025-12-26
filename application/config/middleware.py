@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def create_middleware_config(settings: Settings):
-    return [PathNormalizationMiddleware(), ServerSideSessionConfig().middleware]
+    return [ServerSideSessionConfig().middleware]
 
 
 class PathNormalizationMiddleware(ASGIMiddleware):
