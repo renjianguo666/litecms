@@ -67,6 +67,13 @@ def create_engine(settings: Settings) -> AsyncEngine:
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA journal_mode=WAL;")
             cursor.execute("PRAGMA foreign_keys=ON;")
+
+            cursor.execute("PRAGMA synchronous=NORMAL;")  # 性能提升，仍有安全保障
+            cursor.execute("PRAGMA cache_size=-64000;")  # 64MB 内存缓存
+            cursor.execute("PRAGMA temp_store=MEMORY;")  # 临时数据存内存
+            cursor.execute("PRAGMA mmap_size=268435456;")  # 256MB 内存映射
+            cursor.execute("PRAGMA busy_timeout=30000;")  # 锁等待 30 秒
+
             cursor.close()
             dbapi_connection.isolation_level = None
 

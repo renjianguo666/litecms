@@ -32,19 +32,20 @@ class WebController(Controller):
     opt = {"exclude_from_auth": True}
     middleware = [PathNormalizationMiddleware()]
 
-    @get(path=["/", "{path:path}"])
+    @get("/", cache=300)
+    async def index(self, request: Request) -> Response:
+        return await utils.render_template(
+            request=request,
+            template_name=["index.html", "_index.html"],
+        )
+
+    @get("{path:path}")
     async def permalink(
         self,
         request: Request,
         db_session: AsyncSession,
-        path: str | None = None,
+        path: str,
     ) -> Response:
-        if path is None:
-            return await utils.render_template(
-                request=request,
-                template_name=["index.html", "_index.html"],
-            )
-
         for view in [self.category_view, self.article_view]:
             if response := await view(path, request, db_session):
                 return response
