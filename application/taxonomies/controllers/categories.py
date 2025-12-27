@@ -37,7 +37,8 @@ class CategoryController(Controller):
     async def list_categories(
         self,
         service: CategoryService,
-        limit_offset: LimitOffset,
+        page: Annotated[int, Parameter(default=1)],
+        page_size: Annotated[int, Parameter(default=50)],
         search: Annotated[str | None, Parameter(default=None)],
     ) -> OffsetPagination[CategoryLiteSchema]:
         filters = []
@@ -46,7 +47,7 @@ class CategoryController(Controller):
                 SearchFilter(field_name="name", value=search, ignore_case=True)
             )
 
-        filters.append(limit_offset)
+        filters.append(LimitOffset(limit=page_size, offset=page_size * (page - 1)))
         results, total = await service.list_and_count(
             *filters,
             load=lazyload("*"),

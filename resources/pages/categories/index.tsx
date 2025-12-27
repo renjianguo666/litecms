@@ -18,7 +18,7 @@ export default function Categories() {
     search:
       typeof searchParams.search === "string" ? searchParams.search : undefined,
     page: Number(searchParams.page) || 1,
-    page_size: Number(searchParams.page_size) || 10,
+    page_size: Number(searchParams.page_size) || 50,
   });
 
   // 处理参数变化 - 修改 URL search params
