@@ -10,11 +10,13 @@ from advanced_alchemy.filters import (
     LimitOffset,
     OrderBy,
 )
+from sqlalchemy.orm import defer, joinedload, load_only, noload
 
+from application.accounts.models import User
 from application.articles.models import Article, PublishStatus
 from application.articles.services import ArticleRepository
 from application.config import config, template
-from application.taxonomies.models import Feature, Special
+from application.taxonomies.models import Category, Feature, Special
 from application.utils import list_to_tree
 
 from .schemas import (
@@ -116,6 +118,7 @@ async def article_select(
     special: UUID | list[UUID] | None = None,
     feature: UUID | list[UUID] | None = None,
     limit: int = 10,
+    cover: bool = False,
     order_by: str = "published_at",
     order_dir: Literal["desc", "asc"] = "desc",
 ):
@@ -128,6 +131,9 @@ async def article_select(
             field_name="status", operator="eq", value=PublishStatus.PUBLISHED
         ),
     ]
+
+    if cover:
+        condition.append(Article.cover_url.isnot(None))
 
     # 处理 category 参数
     if category is not None:
@@ -160,6 +166,18 @@ async def article_select(
         else:
             condition.append(Article.features.any(Feature.id == feature))
 
-    result = await repo.list(*condition)
+    result = await repo.list(
+        *condition,
+        load=[
+            defer(Article.text),
+            joinedload(Article.creator).options(
+                load_only(User.id, User.username, User.email), noload(User.roles)
+            ),
+            joinedload(Article.category).options(
+                noload(Category.parent),
+                noload(Category.children),
+            ),
+        ],
+    )
     pydantic_list = article_list_adapter.validate_python(result)
     return article_list_adapter.dump_python(pydantic_list)
