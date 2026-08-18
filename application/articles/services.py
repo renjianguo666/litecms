@@ -1,19 +1,17 @@
 from __future__ import annotations
 
+from collections import Counter
+from math import log, sqrt
 from random import randint
 from typing import TYPE_CHECKING, Any, Sequence
 from uuid import UUID, uuid7
 
-import networkx as nx
 import rjieba
 from advanced_alchemy.filters import CollectionFilter
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService, schema_dump
 from advanced_alchemy.service.typing import ModelDictT
-from scipy.sparse import csr_matrix
 from selectolax.parser import HTMLParser
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import normalize
 
 from application.mixins import PaginationServiceMixin
 from application.permalink import build_permalink
@@ -32,6 +30,18 @@ if TYPE_CHECKING:
 
 # 中文句子分隔符（句末 + 换行）
 _SENTENCE_SPLITS = "。！？!?\n"
+_STOPWORDS = {
+    "我们",
+    "你们",
+    "他们",
+    "以及",
+    "其中",
+    "这个",
+    "那个",
+    "进行",
+    "相关",
+    "通过",
+}
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -68,13 +78,98 @@ def _truncate_at_boundary(text: str, max_chars: int) -> str:
     return cut.rstrip()
 
 
+def _tokenize_sentence(sentence: str) -> list[str]:
+    return [
+        t
+        for w in rjieba.cut(sentence)
+        if (t := w.strip()) and len(t) > 1 and t not in _STOPWORDS
+    ]
+
+
+def _idf(tokenized: list[list[str]]) -> dict[str, float]:
+    """平滑 IDF"""
+    n = len(tokenized)
+    df: Counter[str] = Counter()
+    for ts in tokenized:
+        for t in set(ts):
+            df[t] += 1
+    return {t: log((n + 1) / (c + 1)) + 1.0 for t, c in df.items()}
+
+
+def _tfidf_vec(tokens: list[str], idf_map: dict[str, float]) -> dict[str, float]:
+    """稀疏 TF-IDF 向量 + L2 归一"""
+    tf = Counter(tokens)
+    vec = {t: c * idf_map.get(t, 1.0) for t, c in tf.items()}
+    norm = sqrt(sum(v * v for v in vec.values())) or 1.0
+    return {t: v / norm for t, v in vec.items()}
+
+
+def _cosine_sparse(a: dict[str, float], b: dict[str, float]) -> float:
+    """稀疏向量余弦（两向量已归一）"""
+    if len(a) > len(b):
+        a, b = b, a
+    return sum(v * b.get(k, 0.0) for k, v in a.items())
+
+
+def _build_similarity_matrix(vecs: list[dict[str, float]]) -> list[list[float]]:
+    n = len(vecs)
+    m = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            s = _cosine_sparse(vecs[i], vecs[j])
+            # 过滤极小噪声边
+            if s > 1e-6:
+                m[i][j] = s
+                m[j][i] = s
+    return m
+
+
+def _pagerank(
+    sim: list[list[float]],
+    alpha: float = 0.85,
+    max_iter: int = 60,
+    tol: float = 1e-6,
+) -> list[float]:
+    """纯 Python PageRank"""
+    n = len(sim)
+    if n == 0:
+        return []
+
+    ranks = [1.0 / n] * n
+    out_sum = [sum(row) for row in sim]
+
+    for _ in range(max_iter):
+        new_ranks = [(1.0 - alpha) / n] * n
+
+        for j in range(n):
+            if out_sum[j] == 0.0:
+                # dangling node 均匀分发
+                share = alpha * ranks[j] / n
+                for i in range(n):
+                    new_ranks[i] += share
+            else:
+                share_base = alpha * ranks[j] / out_sum[j]
+                row = sim[j]
+                for i in range(n):
+                    w = row[i]
+                    if w > 0:
+                        new_ranks[i] += share_base * w
+
+        delta = sum(abs(new_ranks[i] - ranks[i]) for i in range(n))
+        ranks = new_ranks
+        if delta < tol:
+            break
+
+    return ranks
+
+
 def extract_description_textrank(
     html_text: str,
     sentences_count: int = 2,
     max_chars: int = 150,
 ) -> str:
     """
-    使用 TextRank（无 TF‑IDF）生成摘要。
+    使用纯 Python TextRank 生成摘要（不依赖 sklearn/scipy/networkx）。
     失败自动降级为纯文本截取。
     """
     if not html_text or not html_text.strip():
@@ -94,7 +189,8 @@ def extract_description_textrank(
     # 2. 切句
     sentences = _split_sentences(plain_text)
     if not sentences:
-        return plain_text[:max_chars]
+        return _truncate_at_boundary(plain_text, max_chars)
+
     if len(sentences) <= sentences_count:
         result = "".join(sentences)
         return (
@@ -104,51 +200,31 @@ def extract_description_textrank(
         )
 
     try:
-        # 3. rjieba 分词
-        tokenized: list[list[str]] = [
-            [w for w in rjieba.cut(s) if len(w) > 1] for s in sentences
-        ]
+        # 3. 分词 + TF-IDF 稀疏向量
+        tokenized = [_tokenize_sentence(s) for s in sentences]
+        idf_map = _idf(tokenized)
+        vecs = [_tfidf_vec(ts, idf_map) for ts in tokenized]
 
-        # 4. 构建词频矩阵（BM25 风格，不依赖 TF‑IDF）
-        vocab: dict[str, int] = {}
-        rows, cols, data = [], [], []
+        # 4. 相似图 + TextRank(PageRank)
+        sim = _build_similarity_matrix(vecs)
+        scores = _pagerank(sim, alpha=0.85, max_iter=60, tol=1e-6)
 
-        for i, words in enumerate(tokenized):
-            seen = set()
-            for w in words:
-                if w not in vocab:
-                    vocab[w] = len(vocab)
-                idx = vocab[w]
-                if idx not in seen:
-                    rows.append(i)
-                    cols.append(idx)
-                    data.append(1.0)
-                    seen.add(idx)
+        # 5. 取 top N，保持原文顺序
+        ranked_idx = sorted(
+            range(len(sentences)), key=lambda i: scores[i], reverse=True
+        )
+        top_idx = sorted(ranked_idx[:sentences_count])
+        result = "".join(sentences[i] for i in top_idx)
 
-        X = csr_matrix((data, (rows, cols)), shape=(len(sentences), len(vocab)))
-        X = normalize(X, norm="l2", axis=1)
-
-        # 5. 句子相似度矩阵（余弦）
-        sim = cosine_similarity(X, dense_output=False)
-
-        # 6. TextRank（PageRank on similarity graph）
-        graph = nx.from_scipy_sparse_array(sim)
-        scores = nx.pagerank(graph, alpha=0.85, max_iter=100)
-
-        # 7. 取 top N 句，保持原文顺序
-        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-        top_indices = sorted(i for i, _ in ranked[:sentences_count])
-        result = "".join(sentences[i] for i in top_indices)
-
-        # 8. 截断保护
+        # 6. 截断保护
         if len(result) > max_chars:
             result = _truncate_at_boundary(result, max_chars)
 
-        return result or plain_text[:max_chars]
+        return result or _truncate_at_boundary(plain_text, max_chars)
 
     except Exception:
-        # 任何异常（NetworkX / 稀疏矩阵 / 迭代不收敛）全部降级
-        return plain_text[:max_chars]
+        # 任何异常全部降级
+        return _truncate_at_boundary(plain_text, max_chars)
 
 
 def extract_cover_url(html_text: str) -> str:

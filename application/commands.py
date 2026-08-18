@@ -114,11 +114,14 @@ User={user}
 Group={group}
 WorkingDirectory={cfg.root_dir}
 Environment="PATH={venv_bin}:/usr/bin"
-ExecStart={granian_exe} --interface asgi --factory --uds {sock_path} --uds-permissions 0o666 application:create_app
+ExecStart={granian_exe} --interface asgi --factory --workers 1 --uds {sock_path} --uds-permissions 666 application:create_app
 Restart=always
 RestartSec=5
+MemoryHigh=550M
+MemoryMax=800M
 StandardOutput=append:{log_path}
 StandardError=append:{log_path}
+
 
 [Install]
 WantedBy=multi-user.target
@@ -142,7 +145,7 @@ server {{
     }}
 
     location / {{
-        try_files $uri @{project_name}
+        try_files $uri @{project_name};
     }}
 
 
