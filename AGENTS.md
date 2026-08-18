@@ -4,7 +4,7 @@ Litestar CMS — server-rendered content management system with AdvancedAlchemy,
 
 ## Project
 
-- **Stack:** Litestar (sync), AdvancedAlchemy (sync session), SQLAlchemy ORM, Jinja2, HTMX, Alpine.js, Tailwind CSS, daisyUI v5
+- **Stack:** Litestar, AdvancedAlchemy, SQLAlchemy ORM, Jinja2, HTMX, Alpine.js, Tailwind CSS, daisyUI v5
 - **Python:** 3.14+
 - **Package manager:** uv (see `uv.lock`)
 - **Entry point:** `application/__init__.py` → `create_app()` returns a `Litestar` instance
@@ -38,7 +38,6 @@ Migrations use AdvancedAlchemy's Alembic integration — never run `alembic` dir
 
 ### Style
 - `from __future__ import annotations` at top of every Python file
-- Sync only — no `async def` anywhere in handlers/services/repos
 - Models inherit `UUIDv7AuditBase` or `UUIDv7Base` from AdvancedAlchemy
 - Table names: `snake_case_plural` (e.g. `accounts_users`, `contents_items`)
 - Route names: `module:action` (e.g. `dashboard:index`, `settings:save`)
@@ -67,8 +66,6 @@ Migrations use AdvancedAlchemy's Alembic integration — never run `alembic` dir
 - Use `schema_dump()` from AdvancedAlchemy for msgspec-to-dict conversion
 
 ### Database
-- Sync session only (SQLAlchemySyncConfig, SyncSessionConfig, autocommit before_send_handler)
-- `expire_on_commit=False` so objects remain usable after commit
 - SQLite: WAL mode, foreign keys ON, busy_timeout=30s, BEGIN IMMEDIATE
 - Never create sessions or engines manually
 
@@ -97,7 +94,6 @@ Migrations use AdvancedAlchemy's Alembic integration — never run `alembic` dir
 
 Never generate:
 - SPA, React, Vue, client-side routing, API-first frontend architecture
-- AsyncSession, async engine, async repos, async database access
 - Client-side state management
 - Direct Alembic CLI usage or manual alembic env config
 - Pseudo code, TODO placeholders, omitted implementation

@@ -11,6 +11,7 @@ from advanced_alchemy.filters import CollectionFilter
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService, schema_dump
 from advanced_alchemy.service.typing import ModelDictT
+from litestar.concurrency import sync_to_thread
 from selectolax.parser import HTMLParser
 
 from application.mixins import PaginationServiceMixin
@@ -288,15 +289,18 @@ class ArticleService(
         model = await super().to_model(data)
 
         # 净化 HTML
-        model.text = sanitize_html(data.get("text", ""))
+        # model.text = sanitize_html(data.get("text", ""))
+        model.text = await sync_to_thread(sanitize_html, data.get("text", ""))
 
         # 描述为空时自动提取摘要
         if not model.description:
-            model.description = extract_description_textrank(model.text)
+            model.description = await sync_to_thread(
+                extract_description_textrank, model.text
+            )
 
         # 封面为空时自动提取正文第一张图
         if not model.cover_url:
-            model.cover_url = extract_cover_url(model.text)
+            model.cover_url = await sync_to_thread(extract_cover_url, model.text)
 
         model.path = build_permalink(model.category.content_path, model)
 
