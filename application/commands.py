@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from itertools import groupby
 
 import anyio
@@ -12,6 +13,7 @@ from application.accounts.commands import (
     check_user_exists,
     create_user,
 )
+from application.config import cfg
 from application.guards import PermissionGuard
 from application.taxonomies.commands import create_default_feature
 
@@ -67,3 +69,107 @@ class CommandPlugin(CLIPlugin):
 
             click.echo("   ✓ 管理员创建完成")
             click.echo("系统初始化全部完成！")
+
+        @cli.command("ok")
+        def ok(app: Litestar) -> None:
+            print("==", cfg.root_dir.name)
+
+            venv_bin = cfg.root_dir / ".venv" / "bin"
+            granian_exe = venv_bin / "granian"
+
+            print(granian_exe)
+
+        @cli.command("deploy", help="生成 systemd 和 Nginx 配置文件（手动部署）")
+        @click.option("--domain", required=True, help="部署域名")
+        def deploy(app: Litestar, domain: str) -> None:
+
+            # 通过环境变量或默认值（灵活配置）
+            user = os.getenv("USER")
+            group = user
+
+            project_name = cfg.root_dir.name
+            venv_bin = cfg.root_dir / ".venv" / "bin"
+            granian_exe = venv_bin / "granian"
+
+            if not granian_exe.exists():
+                click.echo(
+                    f"❌ 未找到 {granian_exe}，请确保虚拟环境已安装 granian", err=True
+                )
+                return
+
+            sock_path = f"/tmp/{project_name}.sock"
+            log_path = cfg.storage_dir / "logs" / "granian.log"
+            deploy_dir = cfg.storage_dir / "deploy"
+            deploy_dir.mkdir(exist_ok=True)
+
+            # 1. 生成 systemd service
+            service_content = f"""\
+[Unit]
+Description={project_name.title()} Application
+After=network.target
+
+[Service]
+Type=simple
+User={user}
+Group={group}
+WorkingDirectory={cfg.root_dir}
+Environment="PATH={venv_bin}:/usr/bin"
+ExecStart={granian_exe} --interface asgi --factory --uds {sock_path} --uds-permissions 0o666 application:create_app
+Restart=always
+RestartSec=5
+StandardOutput=append:{log_path}
+StandardError=append:{log_path}
+
+[Install]
+WantedBy=multi-user.target
+        """
+            (deploy_dir / f"{project_name}.service").write_text(service_content)
+
+            # 2. 生成 Nginx 配置
+            nginx_content = f"""\
+upstream {project_name}_backend {{
+    server unix:{sock_path};
+    keepalive 32;
+}}
+
+server {{
+    listen 80;
+    server_name {domain};
+
+    location /static {{
+        alias {cfg.public_dir}/static;
+        expires 30d;
+    }}
+
+    location / {{
+        try_files $uri @{project_name}
+    }}
+
+
+    location @{project_name} {{
+        proxy_pass http://{project_name}_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }}
+}}
+        """
+            (deploy_dir / "nginx.conf").write_text(nginx_content)
+
+            click.echo(f"✅ 配置文件已生成至 {deploy_dir}")
+            click.echo("\n📌 手动部署步骤：")
+            click.echo("  1. 复制 systemd 服务并启用：")
+            click.echo(
+                f"     sudo cp {deploy_dir}/{project_name}.service /etc/systemd/system/"
+            )
+            click.echo("     sudo systemctl daemon-reload")
+            click.echo(f"     sudo systemctl enable --now {project_name}")
+            click.echo("  2. 复制 Nginx 配置并重载：")
+            click.echo(
+                f"     sudo cp {deploy_dir}/nginx.conf /etc/nginx/sites-enabled/{project_name}"
+            )
+            click.echo("     sudo nginx -t && sudo systemctl reload nginx")
+            click.echo("  3. 查看状态/日志：")
+            click.echo(f"     sudo systemctl status {project_name}")
+            click.echo(f"     sudo journalctl -u {project_name} -f")

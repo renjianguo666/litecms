@@ -4,6 +4,7 @@ from random import randint
 from typing import TYPE_CHECKING, Any, Sequence
 from uuid import UUID, uuid7
 
+import networkx as nx
 import rjieba
 from advanced_alchemy.filters import CollectionFilter
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
@@ -131,8 +132,6 @@ def extract_description_textrank(
         sim = cosine_similarity(X, dense_output=False)
 
         # 6. TextRank（PageRank on similarity graph）
-        import networkx as nx
-
         graph = nx.from_scipy_sparse_array(sim)
         scores = nx.pagerank(graph, alpha=0.85, max_iter=100)
 

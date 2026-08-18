@@ -11,7 +11,10 @@ from __future__ import annotations
 from urllib.parse import urlparse
 
 import nh3
-from bs4 import BeautifulSoup
+
+# 使用 selectolax 替换  BeautifulSoup4
+# from bs4 import BeautifulSoup
+from selectolax.lexbor import LexborHTMLParser
 
 # === 允许的 HTML 标签 ===
 ALLOWED_TAGS = {
@@ -141,6 +144,7 @@ IFRAME_ALLOWED_DOMAINS = {
 }
 
 
+# 使用 selectolax 替换  BeautifulSoup4
 def sanitize_html(html_text: str) -> str:
     """净化 HTML：剥离危险标签/属性，校验 iframe 域名白名单。
 
@@ -159,13 +163,10 @@ def sanitize_html(html_text: str) -> str:
         link_rel=None,
     )
 
-    # 逐 iframe 补刀：src 域名不在白名单的整个 iframe 去掉
-    # 用 lxml 解析(需遍历删除非法 iframe)。lxml 是文档解析器, 会把片段自动
-    # 补全为完整文档(套 <html><body>), 故不能用 str(soup) 返回——会把外壳
-    # 一起存进库, 污染前台 DOM 与编辑器回显。取 body 内部片段输出。
-    soup = BeautifulSoup(cleaned, "lxml")
-    for iframe in soup.find_all("iframe"):
-        src_val = iframe.get("src")
+    tree = LexborHTMLParser(cleaned)
+
+    for iframe in tree.css("iframe"):
+        src_val = iframe.attributes.get("src")
         src = src_val.strip() if isinstance(src_val, str) else ""
         if not src:
             iframe.decompose()
@@ -177,6 +178,45 @@ def sanitize_html(html_text: str) -> str:
         ):
             iframe.decompose()
 
-    # decode_contents() 只返回 <body> 内部子节点, 不含 html/body 外壳。
-    # 空输入已在上方过滤, 此处理论上 body 不会为 None, 兜底防脏数据。
-    return soup.body.decode_contents() if soup.body else ""
+    return tree.body.inner_html or "" if tree.body else ""
+
+
+# def sanitize_html(html_text: str) -> str:
+#     """净化 HTML：剥离危险标签/属性，校验 iframe 域名白名单。
+
+#     不在白名单内的标签属性和域名都会被删除。
+#     """
+#     if not html_text or not html_text.strip():
+#         return ""
+
+#     cleaned = nh3.clean(
+#         html_text,
+#         tags=ALLOWED_TAGS,
+#         attributes=ALLOWED_ATTRS,
+#         url_schemes={"http", "https", "mailto"},
+#         # ALLOWED_ATTRS 已显式允许 a[rel], 需关闭 nh3 默认的 link_rel 强制,
+#         # 否则 nh3>=0.3 对任何输入都抛 ValueError
+#         link_rel=None,
+#     )
+
+#     # 逐 iframe 补刀：src 域名不在白名单的整个 iframe 去掉
+#     # 用 lxml 解析(需遍历删除非法 iframe)。lxml 是文档解析器, 会把片段自动
+#     # 补全为完整文档(套 <html><body>), 故不能用 str(soup) 返回——会把外壳
+#     # 一起存进库, 污染前台 DOM 与编辑器回显。取 body 内部片段输出。
+#     soup = BeautifulSoup(cleaned, "lxml")
+#     for iframe in soup.find_all("iframe"):
+#         src_val = iframe.get("src")
+#         src = src_val.strip() if isinstance(src_val, str) else ""
+#         if not src:
+#             iframe.decompose()
+#             continue
+#         parsed = urlparse(src)
+#         if parsed.hostname not in IFRAME_ALLOWED_DOMAINS or parsed.scheme not in (
+#             "http",
+#             "https",
+#         ):
+#             iframe.decompose()
+
+#     # decode_contents() 只返回 <body> 内部子节点, 不含 html/body 外壳。
+#     # 空输入已在上方过滤, 此处理论上 body 不会为 None, 兜底防脏数据。
+#     return soup.body.decode_contents() if soup.body else ""
