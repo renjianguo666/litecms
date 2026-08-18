@@ -47,7 +47,8 @@ def create_sqlalchemy_engine(config: Config) -> AsyncEngine:
                 cursor.execute("PRAGMA journal_mode=WAL;")
                 cursor.execute("PRAGMA foreign_keys=ON;")
                 cursor.execute("PRAGMA synchronous=NORMAL;")
-                cursor.execute("PRAGMA cache_size=-64000;")
+                cursor.execute("PRAGMA mmap_size = 0;")  # 关掉内存映射
+                cursor.execute("PRAGMA cache_size = -2000;")
                 cursor.execute("PRAGMA temp_store=MEMORY;")
                 cursor.execute("PRAGMA busy_timeout=30000;")
                 dbapi_connection.isolation_level = None
