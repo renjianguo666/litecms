@@ -1,0 +1,84 @@
+<dialog
+  x-data
+  x-init="$el.showModal()"
+  @close="$el.remove()"
+  class="modal"
+>
+  <div class="modal-box p-0 max-w-3xl flex flex-col" style="max-height: 70vh !important">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-base-300 shrink-0">
+      <h3 class="text-lg font-bold">添加内容到推荐:「{{ feature.name }}」</h3>
+      <button type="button" @click="$el.closest('dialog').close()" class="btn btn-sm btn-circle btn-ghost">
+        <span class="icon-[lucide--x] text-lg"></span>
+      </button>
+    </div>
+
+    <div class="px-6 py-4 border-b border-base-300 shrink-0">
+      <input
+        type="search"
+        name="search"
+        value="{{ search }}"
+        placeholder="搜索文章标题..."
+        class="input w-full"
+        hx-get="{{ url_for('features:manage_available', item_id=feature.id) }}"
+        hx-target="#available-list"
+        hx-swap="innerHTML"
+        hx-select="li"
+        hx-trigger="keyup changed delay:500ms, search"
+        hx-push-url="false"
+      >
+    </div>
+
+    <form
+      id="attach-form"
+      hx-post="{{ url_for('features:attach_contents', item_id=feature.id) }}"
+      hx-vals="js:{url: location.pathname + location.search}"
+      hx-push-url="false"
+      class="flex flex-col flex-1 min-h-0"
+    >
+      <div
+        class="flex-1 min-h-0 overflow-y-auto sidebar-scroll p-4"
+        x-data
+        @scroll.throttle.200ms="if ($el.scrollTop + $el.clientHeight >= $el.scrollHeight - 80) { const s = $el.querySelector('[data-sentinel]'); if (s && !s.dataset.loading) { s.dataset.loading = '1'; htmx.trigger(s, 'load-more') } }"
+      >
+        <ul id="available-list" class="list bg-base-100 rounded-box">
+          {% for row in pagination.items %}
+            <li class="list-row">
+              <div class="list-col-grow truncate">{{ row.title }}</div>
+              <div class="text-sm text-base-content/60 whitespace-nowrap">{{ row.category_name }}</div>
+              <input type="checkbox" name="content_ids" value="{{ row.id }}" class="checkbox checkbox-sm">
+            </li>
+          {% else %}
+            <li class="list-row">
+              <div class="text-center py-12 text-base-content/50 w-full">暂无可关联的内容</div>
+            </li>
+          {% endfor %}
+
+          {% if pagination.has_next %}
+            <li
+              data-sentinel
+              hx-get="{{ url_for('features:manage_available', item_id=feature.id) }}?page={{ pagination.next_num }}{% if search %}&search={{ search | urlencode }}{% endif %}"
+              hx-trigger="load-more"
+              hx-target="this"
+              hx-swap="outerHTML"
+              hx-select="li"
+            >
+              <div class="text-center py-4 text-base-content/40">
+                <span class="loading loading-spinner loading-sm"></span>
+                加载更多...
+              </div>
+            </li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <div class="flex items-center justify-between px-6 py-4 border-t border-base-300 shrink-0">
+        <span class="text-sm text-base-content/60">
+          勾选后点击"关联选中"将批量添加
+        </span>
+        <button type="submit" class="btn btn-neutral btn-sm">
+          关联选中
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

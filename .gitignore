@@ -1,0 +1,32 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Node
+node_modules/
+
+
+.env
+migrations/*
+
+# ==== storage 目录 ====
+# 忽略 storage 下所有内容（递归）
+storage/**
+# 但保留所有子目录下的 .gitkeep 文件
+!storage/**/.gitkeep
+
+
+# ==== public 目录 ====
+public/**
+# 不忽略 static 目录及其所有内容（递归）
+!public/static/
+!public/static/**
+# 保留所有子目录下的 .gitkeep（以便保留空目录结构）
+!public/**/.gitkeep

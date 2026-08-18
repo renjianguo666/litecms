@@ -1,0 +1,50 @@
+{% macro render_pagination(pagination, extra_class='flex justify-end') %}
+  {% set url_args = dict(request.query_params) %}
+  {% set current_path = request.url.path %}
+
+  <div class="{{ ('join ' ~ extra_class)|trim }}">
+    {% if pagination.has_prev %}
+      {% set _ = url_args.update({'page': pagination.prev_num}) %}
+      <a
+        href="{{ current_path }}?{{ url_args|urlencode }}"
+        class="join-item btn btn-sm"
+        aria-label="上一页"
+      >
+        上一页
+      </a>
+    {% else %}
+      <button class="join-item btn btn-sm btn-disabled" disabled>
+        上一页
+      </button>
+    {% endif %}
+
+    {% for page in pagination.iter_pages() %}
+      {% if page %}
+        {% if page != pagination.page %}
+          {% set _ = url_args.update({'page': page}) %}
+          <a
+            href="{{ current_path }}?{{ url_args|urlencode }}"
+            class="join-item btn btn-sm"
+          >{{ page }}</a>
+        {% else %}
+          <button class="join-item btn btn-sm btn-neutral">{{ page }}</button>
+        {% endif %}
+      {% else %}
+        <button class="join-item btn btn-sm btn-disabled" disabled>…</button>
+      {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+      {% set _ = url_args.update({'page': pagination.next_num}) %}
+      <a
+        href="{{ current_path }}?{{ url_args|urlencode }}"
+        class="join-item btn btn-sm"
+        aria-label="下一页"
+      >
+        下一页
+      </a>
+    {% else %}
+      <button class="join-item btn btn-sm btn-disabled" disabled>下一页</button>
+    {% endif %}
+  </div>
+{% endmacro %}

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - 页面未找到 - {{ settings.site_name }}</title>
+    {# 独立 404 页: 无 header/footer, 零外部依赖(不引 web.css), 内联样式保证任何环境可渲染 #}
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f5f5f5;
+        color: #333;
+        font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        text-align: center;
+      }
+      .code {
+        font-size: 7rem;
+        font-weight: 900;
+        line-height: 1;
+        margin: 0;
+        color: rgba(0, 0, 0, 0.12);
+      }
+      .msg {
+        font-size: 1.1rem;
+        margin: 1rem 0 1.5rem;
+        color: rgba(0, 0, 0, 0.55);
+      }
+      .btns {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+      }
+      a {
+        display: inline-block;
+        padding: 0.4rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        text-decoration: none;
+        transition: opacity 0.15s;
+      }
+      a:hover {
+        opacity: 0.8;
+      }
+      a.primary {
+        background: #1d4ed8;
+        color: #fff;
+      }
+      a.ghost {
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <p class="code">404</p>
+      <p class="msg">您访问的页面不存在或已被移除</p>
+      <div class="btns">
+        <a class="primary" href="/">返回首页</a>
+        <a class="ghost" href="javascript:history.back()">返回上一页</a>
+      </div>
+    </div>
+  </body>
+</html>

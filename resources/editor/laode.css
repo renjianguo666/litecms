@@ -1,0 +1,176 @@
+/* ============ 编辑器尺寸 ============ */
+/* .editor-content 的 height/min-height/max-height 由 JS inline style 设置 */
+/* inline style 写在父元素上,不碰 .ProseMirror,不会触发 reflow */
+.litecms-editor {
+    display: flex;
+    flex-direction: column;
+}
+
+.litecms-editor .editor-content {
+    display: flex;
+    flex-direction: column;
+    resize: vertical;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* ProseMirror 编辑区:撑满内容区,保证光标区域可点击 */
+.litecms-editor .ProseMirror {
+    min-height: 100%;
+    cursor: text;
+}
+
+/* 段落间距:p 和 p 之间留呼吸空间,首尾不产生多余外边距 */
+.litecms-editor .ProseMirror p {
+    margin: 0.75rem 0;
+}
+.litecms-editor .ProseMirror p:first-child {
+    margin-top: 0;
+}
+.litecms-editor .ProseMirror p:last-child {
+    margin-bottom: 0;
+}
+
+/* ============ Tiptap ResizableNodeView 手柄样式 ============ */
+
+.litecms-editor [data-resize-container] {
+    display: inline-flex;
+    position: relative;
+    max-width: 100%;
+}
+
+.litecms-editor [data-resize-wrapper] {
+    position: relative;
+    display: block;
+    line-height: 0;
+}
+
+.litecms-editor [data-resize-wrapper] img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+/* 手柄默认隐藏,选中图片时才显示 */
+.litecms-editor [data-resize-handle] {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: #2563eb;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* 选中节点(ProseMirror NodeSelection)时显示手柄 */
+.litecms-editor .ProseMirror-selectednode [data-resize-handle],
+.litecms-editor [data-resize-wrapper]:hover [data-resize-handle] {
+    opacity: 1;
+}
+
+/* 四个角的手柄光标 */
+.litecms-editor [data-resize-handle="top-left"],
+.litecms-editor [data-resize-handle="bottom-right"] {
+    cursor: nwse-resize;
+}
+
+.litecms-editor [data-resize-handle="top-right"],
+.litecms-editor [data-resize-handle="bottom-left"] {
+    cursor: nesw-resize;
+}
+
+/* 边手柄(如果启用了) */
+.litecms-editor [data-resize-handle="top"],
+.litecms-editor [data-resize-handle="bottom"] {
+    cursor: ns-resize;
+    width: 30px;
+    height: 8px;
+    border-radius: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.litecms-editor [data-resize-handle="left"],
+.litecms-editor [data-resize-handle="right"] {
+    cursor: ew-resize;
+    width: 8px;
+    height: 30px;
+    border-radius: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* 选中时图片加蓝色边框 */
+.litecms-editor .ProseMirror-selectednode [data-resize-wrapper] img {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* ============ 边框 & 焦点样式(对齐 daisyUI .input 机制) ============ */
+/* daisyUI .input 的边框由三层构成:
+ *   1. border-color 绑定 --input-color(未聚焦时 20% base-content)
+ *   2. box-shadow: 0 1px inset(内部顶部细线,未聚焦时极淡)
+ *   3. 聚焦时 --input-color 变为 100% base-content + 加 outline
+ * 编辑器容器复用同一套变量,保证视觉与 .input 完全一致
+ */
+.litecms-editor {
+    /* --input-color 默认值:20% base-content(与 .input 未聚焦态一致) */
+    --input-color: color-mix(
+        in oklab,
+        var(--color-base-content) 20%,
+        transparent
+    );
+    border-color: var(--input-color);
+    /* 内部顶部细线:与 .input 的 box-shadow 完全一致 */
+    box-shadow:
+        0 1px var(--input-color) inset,
+        0 -1px oklch(100% 0 0 / calc(var(--depth, 1) * 0.1)) inset;
+    /* border-width / border-style / border-radius 由 Tailwind class 提供 */
+}
+
+/* 聚焦时:--input-color 提升到 100%,内部细线变实,加 outline ring */
+.litecms-editor:has(.ProseMirror-focused):not(.is-fullscreen) {
+    --input-color: var(--color-base-content);
+    box-shadow: 0 1px var(--input-color) inset;
+    outline: 2px solid var(--input-color);
+    outline-offset: 2px;
+    isolation: isolate;
+}
+
+/* ============ 全屏样式 ============ */
+.litecms-editor.is-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+.litecms-editor.is-fullscreen .editor-content {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    resize: none !important;
+    flex: 1;
+}
+
+/* ============ 链接样式 ============ */
+/* daisyUI v5 的 .prose 集成会去掉链接下划线，这里显式恢复 */
+.litecms-editor .ProseMirror a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.litecms-editor .ProseMirror a:hover {
+    color: color-mix(in oklab, var(--color-primary) 80%, black);
+}

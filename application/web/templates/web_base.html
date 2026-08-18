@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ settings.site_name }}{% endblock %}</title>
+    <meta name="description" content="{% block description %}{{ settings.site_description }}{% endblock %}">
+    <meta name="keywords" content="{% block keywords %}{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ settings.site_name }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ settings.site_description }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{% endblock %}">
+    <link rel="canonical" href="{{ request.url }}">
+    <link href="{{ url_for('static', file_path='css/web.css') }}" rel="stylesheet" type="text/css">
+    {% block head %}{% endblock %}
+  </head>
+  <body class="min-h-svh bg-base-200 text-base-content antialiased flex flex-col">
+    {# ===== 站点头部 + 主导航 (daisyUI navbar) ===== #}
+    <header class="bg-base-100 border-b border-base-300 sticky top-0 z-30 shadow-sm">
+      <div class="navbar max-w-300 mx-auto px-4">
+        {# navbar-start: Logo + 移动端汉堡菜单 #}
+        <div class="navbar-start">
+          <div class="dropdown">
+            <div tabindex="0" role="button" class="btn btn-ghost lg:hidden" aria-label="菜单">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </div>
+            {# 移动端下拉菜单：包含全部项目 #}
+            <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-1 p-2 shadow bg-base-100 rounded-box w-52">
+              <li class="{% if request.url.path == '/' %}menu-active{% endif %}"><a href="/">首页</a></li>
+              {% for c in category_select(parent_id=None) %}
+                {% set subs = category_select(parent_id=c.id) %}
+                {% if subs %}
+                  <li class="{% if request.url.path.startswith(c.url) %}menu-active{% endif %}">
+                    <details>
+                      <summary>{{ c.name }}</summary>
+                      <ul class="p-2 bg-base-100">
+                        {% for sub in subs %}
+                          <li class="{% if request.url.path.startswith(sub.url) %}menu-active{% endif %}">
+                            <a href="{{ sub.url }}">{{ sub.name }}</a>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    </details>
+                  </li>
+                {% else %}
+                  <li class="{% if request.url.path.startswith(c.url) %}menu-active{% endif %}">
+                    <a href="{{ c.url }}">{{ c.name }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </div>
+          <a href="/" class="btn btn-ghost text-xl font-black tracking-tight">{{ settings.site_name }}</a>
+        </div>
+
+        {# navbar-end: 其他分类菜单，靠右排列 #}
+        <div class="navbar-end hidden lg:flex">
+          <ul class="menu menu-horizontal px-1">
+            {% for c in category_select(parent_id=None) %}
+              {% set subs = category_select(parent_id=c.id) %}
+              {% if subs %}
+                <li class="{% if request.url.path.startswith(c.url) %}menu-active{% endif %}">
+                  <details>
+                    <summary>{{ c.name }}</summary>
+                    <ul class="p-2 bg-base-100">
+                      {% for sub in subs %}
+                        <li class="{% if request.url.path.startswith(sub.url) %}menu-active{% endif %}">
+                          <a href="{{ sub.url }}">{{ sub.name }}</a>
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </details>
+                </li>
+              {% else %}
+                <li class="{% if request.url.path.startswith(c.url) %}menu-active{% endif %}">
+                  <a href="{{ c.url }}">{{ c.name }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    {# ===== 主内容区 ===== #}
+    <main class="flex-1 mx-auto max-w-300 px-4 py-6 w-full">
+      {% block content %}{% endblock %}
+    </main>
+
+    {# ===== 页脚 ===== #}
+    <footer class="bg-base-100 border-t border-base-300 mt-8">
+      <div class="mx-auto max-w-300 px-4 py-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm mb-6">
+          <div>
+            <h3 class="font-semibold mb-3 text-base-content">{{ settings.site_name }}</h3>
+            <p class="text-base-content/50 text-xs leading-relaxed">{{ settings.site_description }}</p>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-3 text-base-content">关于我们</h3>
+            <ul class="space-y-1.5 text-base-content/60">
+              <li><a href="/about" class="hover:text-primary text-xs">网站介绍</a></li>
+              <li><a href="/contact" class="hover:text-primary text-xs">联系我们</a></li>
+              <li><a href="/copyright" class="hover:text-primary text-xs">版权声明</a></li>
+              <li><a href="/" class="hover:text-primary text-xs">加入我们</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-3 text-base-content">服务支持</h3>
+            <ul class="space-y-1.5 text-base-content/60">
+              <li><a href="/" class="hover:text-primary text-xs">使用帮助</a></li>
+              <li><a href="/" class="hover:text-primary text-xs">投稿须知</a></li>
+              <li><a href="/" class="hover:text-primary text-xs">广告合作</a></li>
+              <li><a href="/sitemap.xml" class="hover:text-primary text-xs">网站地图</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-3 text-base-content">关注我们</h3>
+            <ul class="space-y-1.5 text-base-content/60">
+              <li><a href="/" class="hover:text-primary text-xs">微信公众号</a></li>
+              <li><a href="/" class="hover:text-primary text-xs">新浪微博</a></li>
+              <li><a href="/" class="hover:text-primary text-xs">RSS 订阅</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="border-t border-base-200 pt-4 text-center text-xs text-base-content/40">
+          <p>&copy; {{ settings.site_name }} · {{ settings.site_url }}</p>
+        </div>
+      </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

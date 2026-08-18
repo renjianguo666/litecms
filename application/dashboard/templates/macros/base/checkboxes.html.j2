@@ -1,0 +1,33 @@
+{#
+  render_checkboxes 宏：把 wtforms SelectMultipleField(CheckboxInput) 渲染为 daisyUI checkbox 组
+  - 最小化设计：只渲染控件本身，不含 label 和布局外壳
+  - 适合选项少（≤ ~8）、稳定的字段
+  - 原生 checkbox 是真相源（wtforms 渲染 + 原生提交）
+  - 用法（垂直布局）：
+    <div class="flex flex-col gap-1.5">
+      <label class="text-sm font-medium">推荐位</label>
+      {{ render_checkboxes(field) }}
+    </div>
+  - 用法（水平布局）：
+    <div class="flex items-center gap-3">
+      <span class="text-sm w-16 shrink-0">推荐位</span>
+      {{ render_checkboxes(field) }}
+    </div>
+#}
+{%
+  macro render_checkboxes(
+  field,
+  wrapper_class="flex flex-wrap gap-2",
+  label_class="flex items-center gap-1.5 cursor-pointer text-sm",
+  checkbox_class="checkbox checkbox-sm"
+  )
+%}
+  <div class="{{wrapper_class}}">
+    {% for item in field %}
+      <label class="{{label_class}}">
+        {{ item(class_=checkbox_class)|safe }}
+        <span>{{ item.label.text }}</span>
+      </label>
+    {% endfor %}
+  </div>
+{% endmacro %}

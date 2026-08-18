@@ -1,0 +1,87 @@
+{#
+  render_combobox 宏：把 wtforms SelectMultipleField(默认 Select) 增强为 shadcn 风格多选
+  - 最小化设计：只渲染控件本身，不含 label 和布局外壳
+  - 原生 <select multiple> 是真相源（wtforms 渲染 + 原生提交）
+  - Alpine 只管状态同步（select ↔ chips），不碰定位
+  - 下拉用 popover + CSS Anchor Positioning（和 datetime 宏统一架构）：
+    * popover="auto" -> top layer，绕过祖先 overflow:hidden
+    * position-anchor -> 浏览器 paint 前定位，零闪烁
+    * position-try-fallbacks -> 原生翻转
+    * light-dismiss -> 点外部/Esc 自动关闭
+  - 触发器是 div（含 chips 和删除按钮），不能用 popovertarget，用 JS togglePopover
+    由于 popover="auto" 的 light-dismiss 在 click 之前先关闭 popover，直接 toggle 会导致
+    再点触发器时"关了又开"。用 pointerdown 记录 popover 真实状态，click 时据此决定：
+      - 点击时 popover 是开的 -> light-dismiss 已关，click 不再重新打开（实现"再点关闭"）
+      - 点击时 popover 是关的 -> click 打开它
+  - 用法（垂直布局）：
+    <div class="flex flex-col gap-1.5">
+      <label class="text-sm font-medium">专题</label>
+      {{ render_combobox(form.specials) }}
+    </div>
+  - 用法（水平布局）：
+    <div class="flex items-center gap-3">
+      <span class="text-sm w-16 shrink-0">专题</span>
+      {{ render_combobox(form.specials) }}
+    </div>
+#}
+{%
+  macro render_combobox(
+      field,
+      box_class="input h-auto min-h-10 flex-1 w-full flex-wrap items-center gap-1.5 py-1.5 cursor-pointer flex",
+      chip_class="badge badge-sm badge-neutral badge-dash gap-1",
+      option_class="flex items-center gap-2 px-3 py-1.5 hover:bg-base-200 cursor-pointer",
+      checkbox_class="checkbox checkbox-sm",
+      remove_class="opacity-50 hover:opacity-100",
+      placeholder_class="text-sm text-base-content/40",
+      placeholder="点击选择..."
+  )
+%}
+  {%- set anchor_name = "--combobox-" ~ field.id -%}
+  {%- set popover_id = "combobox-popover-" ~ field.id -%}
+  <div class="contents" x-data="combobox" data-combobox-root>
+    {# 原生 select（隐藏，真相源 + 提交）#}
+    <select x-ref="select" name="{{ field.name }}" multiple hidden>
+      {% for v, l in field.choices or [] %}
+        <option value="{{ v }}" {% if v in (field.data or []) %}selected{% endif %}>{{ l }}</option>
+      {% endfor %}
+    </select>
+
+    {# 输入框：chips 展示已选（下拉定位锚点 + 触发器）#}
+    <div
+      x-ref="box"
+      tabindex="0"
+      x-init="wasOpen = false"
+      @pointerdown="wasOpen = $refs.dropdown.matches(':popover-open')"
+      @click="wasOpen ? null : $refs.dropdown.showPopover()"
+      data-combobox-box
+      style="anchor-name: {{ anchor_name }}"
+      class="{{box_class}}"
+    >
+      <template x-for="opt in selected" :key="opt.value">
+        <span class="{{chip_class}}">
+          <span x-text="opt.label"></span>
+          <button type="button" @click.stop="remove(opt.value)" class="{{remove_class}}">
+            <span class="icon-[lucide--x] text-lg"></span>
+          </button>
+        </span>
+      </template>
+      <span x-show="selected.length === 0" class="{{placeholder_class}}">{{ placeholder }}</span>
+    </div>
+
+    {# 下拉：popover + CSS Anchor Positioning（和 datetime 宏统一）#}
+    <div
+      popover="auto"
+      id="{{popover_id}}"
+      x-ref="dropdown"
+      class="combobox-popover"
+      style="position-anchor: {{ anchor_name }}"
+    >
+      <template x-for="opt in options" :key="opt.value">
+        <label class="{{option_class}}">
+          <input type="checkbox" :checked="opt.selected" @change="toggle(opt.value)" class="{{checkbox_class}}">
+          <span x-text="opt.label"></span>
+        </label>
+      </template>
+    </div>
+  </div>
+{% endmacro %}

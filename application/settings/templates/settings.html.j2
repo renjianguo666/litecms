@@ -1,0 +1,48 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/base/form.html.j2' import render_field, render_submit %}
+
+  <div class="flex flex-col gap-3">
+    <h2 class="text-xl font-semibold ps-2 min-h-10 flex items-center">系统设置</h2>
+
+    <form action="{{ url_for('settings:save') }}" method="post" hx-disabled-elt="[type=submit]">
+      {# 注册字段:按 group 分块 #}
+      {% for group_name, fields in groups.items() %}
+        <div class="card bg-base-100 border border-base-300 shadow-sm rounded-box mb-3">
+          <div class="card-body p-4 flex flex-col gap-3">
+            <h3 class="font-semibold text-base">{{ group_name }}</h3>
+            {% for f in fields %}
+              {{ render_field(form[f.key]) }}
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+
+      {# 模板变量区 #}
+      <div class="card bg-base-100 border border-base-300 shadow-sm rounded-box mb-3">
+        <div class="card-body p-4 flex flex-col gap-3">
+          <h3 class="font-semibold text-base">模板变量</h3>
+          {{ render_field(form.template_vars) }}
+        </div>
+      </div>
+
+      {% if request.user.has_permission("settings:save") %}
+        {{ form.submit(class="btn btn-neutral w-full") }}
+      {% endif %}
+    </form>
+  </div>
+
+  <script>
+    document.querySelector("textarea[name='template_vars']")?.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const t = e.target;
+        const start = t.selectionStart;
+        const end = t.selectionEnd;
+        t.value = t.value.slice(0, start) + "  " + t.value.slice(end);
+        t.selectionStart = t.selectionEnd = start + 2;
+      }
+    });
+  </script>
+{% endblock %}

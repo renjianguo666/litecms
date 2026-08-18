@@ -1,0 +1,72 @@
+{%- from 'macros/base/dialog.html.j2' import render_dialog with context -%}
+{%- from 'macros/base/form.html.j2' import render_field with context -%}
+
+{%- macro render_destroy_dialog(form, name, label, disable_submit=false) -%}
+  {% set action_url = url_for(name ~ ':destroy', item_id=request.path_params.item_id) %}
+  {%- set _caller = caller -%}
+  {% call render_dialog(title="删除" ~ label) %}
+    <form
+      id="dialog-form"
+      hx-post="{{ action_url ~ '?dialog=true' }}"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-select="#dialog-form"
+      hx-disabled-elt="[type=submit]"
+    >
+      <div class="flex flex-col gap-4 p-6">
+        {% for error in form.form_errors %}
+          <div role="alert" class="alert alert-warning">
+            <span class="icon-[lucide--triangle-alert] text-2xl shrink-0"></span>
+            <span>{{ error }}</span>
+          </div>
+        {% endfor %}
+
+        {% if _caller is defined %}
+          {{ _caller() }}
+        {% endif %}
+        {% for field in form if field.type != "SubmitField" %}
+          {{ render_field(field) }}
+        {% endfor %}
+        <p class="text-base-content/70">
+          此操作不可恢复。请输入 “<strong>我确认删除</strong>” 以继续
+        </p>
+      </div>
+      <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-base-300">
+        <button type="button" @click="$el.closest('dialog').close()" class="btn">取消</button>
+        {% for field in form if field.type == "SubmitField" %}
+          {{ field(class="btn btn-warning") }}
+        {% endfor %}
+      </div>
+    </form>
+  {% endcall %}
+{%- endmacro -%}
+
+{%- macro render_destroy_page(form, name, label) -%}
+  {% set action_url = url_for(name ~ ':destroy', item_id=request.path_params.item_id) %}
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body">
+      <h2 class="text-lg font-bold mb-4">删除{{ label }}</h2>
+      <form
+        hx-post="{{ action_url }}"
+        hx-disabled-elt="[type=submit]"
+      >
+        <div class="flex flex-col gap-4">
+          {% if caller is defined %}
+            {{ caller() }}
+          {% endif %}
+          <p class="text-base-content/70">
+            此操作不可恢复。请输入 <strong>我确认删除</strong> 以继续：
+          </p>
+          {% for field in form if field.type != "SubmitField" %}
+            {{ render_field(field) }}
+          {% endfor %}
+        </div>
+        <div class="flex items-center justify-end gap-3 mt-4">
+          {% for field in form if field.type == "SubmitField" %}
+            {{ field(class="btn btn-warning") }}
+          {% endfor %}
+        </div>
+      </form>
+    </div>
+  </div>
+{%- endmacro -%}

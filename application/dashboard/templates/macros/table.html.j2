@@ -1,0 +1,81 @@
+{% from 'macros/base/table.html.j2' import render_table with context %}
+{% from 'macros/base/pagination.html.j2' import render_pagination with context %}
+
+{%
+  macro render_table_page(
+    name,
+    label,
+    show_search=true,
+    show_create=true,
+    pagination=none,
+    titles=none,
+    custom_actions=none,
+    use_dialog=none
+  )
+%}
+  <div class="flex flex-col gap-3">
+    <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <h2 class="text-xl font-semibold ps-2">{{ label }}管理</h2>
+      <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+        {% if show_search %}
+          <form
+            class="relative w-full sm:w-64"
+            action="{{ url_for(name + ':index') }}"
+            hx-trigger="keyup changed delay:500ms from:#search-input, search from:#search-input"
+          >
+            <input
+              type="search"
+              id="search-input"
+              name="search"
+              value="{{ request.query_params.get('search', '') }}"
+              placeholder="搜索..."
+              class="input"
+            >
+          </form>
+        {% endif %}
+
+        {% if show_create and request.user.has_permission(name ~ ':create') %}
+          {% if use_dialog %}
+            <button
+              class="btn btn-neutral"
+              hx-get="{{ url_for(name + ':new') }}?dialog=true"
+              hx-target="#{{ use_dialog }}"
+              hx-select="dialog"
+              hx-push-url="false"
+            >
+              <span class="icon-[lucide--plus] text-lg"></span>
+              新增{{ label }}
+            </button>
+          {% else %}
+            <a
+              href="{{ url_for(name + ':new') }}"
+              hx-vals="js:{url: location.pathname + location.search}"
+              class="btn btn-neutral"
+            >
+              <span class="icon-[lucide--plus] text-lg"></span>
+              新增{{ label }}
+            </a>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% if caller is defined %}
+      {{ caller() }}
+    {% else %}
+      {{
+        render_table(
+            data=pagination.items,
+            titles=titles,
+            edit_url=(name ~ ':edit') if request.user.has_permission(name ~ ':update') else none,
+            delete_url=(name ~ ':destroy_form') if request.user.has_permission(name ~ ':destroy') else none,
+            custom_actions=custom_actions,
+            use_dialog=use_dialog
+        )
+      }}
+
+      {% if pagination.total > 0 %}
+        {{ render_pagination(pagination) }}
+      {% endif %}
+    {% endif %}
+  </div>
+{% endmacro %}

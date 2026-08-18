@@ -1,0 +1,158 @@
+{% extends "web_base.html" %}
+
+{% block title %}{{ article.title }} - {{ settings.site_name }}{% endblock %}
+{% block description %}{{ article.description or '' }}{% endblock %}
+{% block keywords %}{% for t in article.tags %}{{ t.name }}{% if not loop.last %},{% endif %}{% endfor %}{% endblock %}
+{% block og_title %}{{ article.title }}{% endblock %}
+{% block og_image %}{{ article.cover_url or '' }}{% endblock %}
+
+{% block content %}
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    {# ===== 正文 (3栏) ===== #}
+    <article class="lg:col-span-3 bg-base-100 rounded-lg border border-base-300 p-6 md:p-8">
+      {# 面包屑 #}
+      <nav class="text-xs text-base-content/40 flex items-center gap-1.5 mb-4">
+        <a href="/" class="hover:text-primary">首页</a>
+        {% for b in breadcrumbs %}
+          <span>›</span>
+          <a href="{{ b.url }}" class="hover:text-primary">{{ b.name }}</a>
+        {% endfor %}
+      </nav>
+
+      {# 标题 #}
+      <h1 class="text-2xl md:text-3xl font-bold leading-tight mb-3">{{ article.title }}</h1>
+
+      {# 元信息 #}
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-base-content/50 pb-4 border-b border-base-200 mb-5">
+        <span class="flex items-center gap-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-3.5 w-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
+          </svg>
+          {{ article.author or article.creator.alias }}
+        </span>
+        <span class="flex items-center gap-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-3.5 w-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          {{ article.published_at }}
+        </span>
+        <span class="flex items-center gap-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-3.5 w-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+            />
+          </svg>
+          <script src="/click?permalink={{article.url}}"></script>
+          阅读
+        </span>
+        {% if article.source %}
+          <span>来源: {{ article.source }}</span>
+        {% endif %}
+      </div>
+
+      {# 摘要 #}
+      {% if article.description %}
+        <p class="text-base-content/70 leading-relaxed border-l-4 border-primary/30 pl-4 mb-5 text-sm">
+          {{ article.description }}
+        </p>
+      {% endif %}
+
+      {# 正文 #}
+      <div class="prose prose-base max-w-none prose-headings:font-bold prose-a:text-primary prose-img:rounded-lg">
+        {{ article.text | safe }}
+      </div>
+
+      {# 标签 #}
+      {% if article.tags %}
+        <div class="flex flex-wrap items-center gap-2 mt-6 pt-4 border-t border-base-200">
+          <span class="text-xs text-base-content/40">标签:</span>
+          {% for tag in article.tags %}
+            <a href="/t/{{ tag.slug }}" class="badge badge-outline badge-sm hover:badge-primary">{{ tag.name }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# 版权声明 #}
+      <div class="mt-6 p-3 bg-base-200/50 rounded text-xs text-base-content/50 leading-relaxed">
+        <p>
+          声明：本站内容除特别注明外，均属 {{ settings.site_name }}
+          原创或整理，转载请注明出处。
+        </p>
+      </div>
+
+      {{ wechat_share(title=article.title, desc=article.description, img=article.cover_url) | safe }}
+    </article>
+
+    {# ===== 侧边栏 ===== #}
+    <aside class="space-y-6">
+      {# 栏目最新 #}
+      <section class="bg-base-100 rounded-lg border border-base-300 p-4">
+        <h3 class="font-bold mb-3 flex items-center gap-2">
+          <span class="w-1 h-4 bg-primary rounded"></span>最新文章
+        </h3>
+        <ul class="space-y-2.5">
+          {% for a in article_select(limit=8) %}
+            <li>
+              <a href="{{ a.url }}" class="text-sm hover:text-primary line-clamp-2">{{ a.title }}</a>
+              <p class="text-xs text-base-content/40 mt-0.5">{{ a.published_at }}</p>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      {# 热门 #}
+      <section class="bg-base-100 rounded-lg border border-base-300 p-4">
+        <h3 class="font-bold mb-3 flex items-center gap-2">
+          <span class="w-1 h-4 bg-error rounded"></span>热门
+        </h3>
+        <ol class="space-y-2.5">
+          {% for a in article_select(limit=8, order_by="views") %}
+            <li class="flex items-start gap-2 text-sm">
+              <span
+                class="text-xs font-bold {% if loop.index <= 3 %}text-error{% else %}text-base-content/30{% endif %}"
+              >{{ loop.index }}</span>
+              <a href="{{ a.url }}" class="hover:text-primary line-clamp-2 flex-1">{{ a.title }}</a>
+            </li>
+          {% endfor %}
+        </ol>
+      </section>
+    </aside>
+  </div>
+{% endblock %}

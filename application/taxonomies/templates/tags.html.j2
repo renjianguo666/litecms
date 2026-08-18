@@ -1,0 +1,32 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/table.html.j2' import render_table_page with context %}
+
+  {% macro custom_actions(row) %}
+    {% if request.user.has_permission("tags:update") %}
+    <a
+      class="btn btn-sm btn-dash btn-info"
+      href="{{ url_for('tags:manage_contents', item_id=row.id) }}"
+      hx-vals="js:{url: location.pathname + location.search}"
+    >
+      内容
+    </a>
+    {% endif %}
+  {% endmacro %}
+
+  {{
+    render_table_page(
+        name="tags",
+        label="标签",
+        titles=[
+            ("name", "标签"),
+            ("slug", "slug"),
+            ("created_at", "创建时间")
+        ],
+        pagination=pagination,
+        custom_actions=custom_actions,
+        use_dialog="dialog-container"
+    )
+  }}
+{% endblock %}

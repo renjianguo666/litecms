@@ -1,0 +1,18 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/table.html.j2' import render_table_page with context %}
+
+  {{
+    render_table_page(
+        name="roles",
+        label="角色",
+        titles=[
+            ("name", "角色名称"),
+            ("description", "描述")
+        ],
+        pagination=pagination,
+        use_dialog="dialog-container"
+    )
+  }}
+{% endblock %}

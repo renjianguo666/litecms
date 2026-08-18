@@ -1,0 +1,65 @@
+{% macro render_radio_tree(categories, selected_id=None, level=0) %}
+  <ul class="{% if level == 0 %}text-sm w-full px-0{% else %}ms-4 ps-2{% endif %} flex flex-col gap-1">
+    {% for cat in categories %}
+      <li>
+        {% if cat.children %}
+          <details open>
+            <summary class="hover:bg-base-200 transition-colors font-semibold text-base-content py-2 cursor-pointer list-none flex items-center gap-2">
+              <span class="icon-[lucide--folder] text-lg shrink-0 text-muted-foreground"></span>
+              <span class="flex-1 min-w-0 truncate">{{ cat.name }}</span>
+            </summary>
+
+            {{ render_radio_tree(cat.children, selected_id, level + 1) }}
+          </details>
+        {% else %}
+          <label
+            class="has-checked:bg-base-300 has-checked:font-medium transition-colors flex items-center gap-3 cursor-pointer text-base-content/90 rounded-field px-3 py-1.5"
+          >
+            <input
+              type="radio"
+              name="category"
+              value="{{ cat.id }}"
+              class="radio radio-sm shrink-0"
+              {% if selected_id and (cat.id | string) == (selected_id | string) %}checked autofocus{% endif %}
+            >
+            <span class="truncate">{{ cat.name }}</span>
+          </label>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endmacro %}
+
+{% macro render_checkbox_tree(categories, selected_values=None, level=0) %}
+  {% set checked_ids = (selected_values | map('string') | list) if selected_values else [] %}
+
+  <ul class="{% if level == 0 %}text-sm w-full px-0{% else %}ms-4 ps-2{% endif %} flex flex-col gap-1">
+    {% for cat in categories %}
+      <li>
+        {% if cat.children %}
+          <details open>
+            <summary class="hover:bg-base-200 transition-colors font-semibold text-base-content py-2 cursor-pointer list-none flex items-center gap-2">
+              <span class="icon-[lucide--folder] text-lg shrink-0 text-muted-foreground"></span>
+              <span class="flex-1 min-w-0 truncate">{{ cat.name }}</span>
+            </summary>
+
+            {{ render_checkbox_tree(cat.children, selected_values, level + 1) }}
+          </details>
+        {% else %}
+          <label
+            class="has-checked:bg-base-300 has-checked:font-medium transition-colors flex items-center gap-3 cursor-pointer text-base-content/90 rounded-field px-3 py-1.5"
+          >
+            <input
+              type="checkbox"
+              name="categories"
+              value="{{ cat.id }}"
+              class="checkbox checkbox-sm shrink-0"
+              {% if (cat.id | string) in checked_ids %}checked{% endif %}
+            >
+            <span class="truncate">{{ cat.name }}</span>
+          </label>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endmacro %}

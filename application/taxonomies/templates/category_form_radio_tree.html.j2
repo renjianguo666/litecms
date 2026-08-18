@@ -1,0 +1,49 @@
+{% macro render_category_radio_tree(nodes, category=None, level=0) %}
+  <ul class="{% if level == 0 %}text-sm w-full px-0{% else %}ms-4 ps-2{% endif %} flex flex-col gap-1">
+    {% for cat in nodes %}
+      {% set is_current = category and (cat.id | string) == (category.id | string) %}
+      <li>
+        {% if cat.children %}
+          <label
+            class="has-checked:bg-base-300 transition-colors font-semibold text-base-content py-1.5 flex items-center justify-between cursor-pointer w-full rounded-field px-3"
+          >
+            <span class="flex items-center gap-2 flex-1 min-w-0">
+              <span class="icon-[lucide--folder] text-lg shrink-0 text-muted-foreground"></span>
+              <span class="truncate">{{ cat.name }}{% if is_current %} <span class="text-base-content/50">（当前）</span>{% endif %}</span>
+            </span>
+            <input
+              type="radio"
+              name="parent_id"
+              value="{{ cat.id }}"
+              class="radio radio-sm shrink-0 ml-3"
+              {% if category and category.parent_id and (category.parent_id | string) == (cat.id | string) %}
+                checked
+                autofocus
+              {% endif %}
+              {% if is_current %}disabled{% endif %}
+            >
+          </label>
+
+          {{ render_category_radio_tree(cat.children, category, level + 1) }}
+        {% else %}
+          <label
+            class="has-checked:bg-base-300 has-checked:font-medium transition-colors flex items-center justify-between cursor-pointer text-base-content/90 w-full rounded-field px-3 py-1.5"
+          >
+            <span class="truncate flex-1">{{ cat.name }}{% if is_current %} <span class="text-base-content/50">（当前）</span>{% endif %}</span>
+            <input
+              type="radio"
+              name="parent_id"
+              value="{{ cat.id }}"
+              class="radio radio-sm shrink-0 ml-3"
+              {% if category and category.parent_id and (category.parent_id | string) == (cat.id | string) %}
+                checked
+                autofocus
+              {% endif %}
+              {% if is_current %}disabled{% endif %}
+            >
+          </label>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endmacro %}

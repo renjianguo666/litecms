@@ -1,0 +1,147 @@
+{% extends "web_base.html" %}
+
+{% block content %}
+  <div class="space-y-10">
+    {# ===== 焦点头条 (全宽 hero) ===== #}
+    {# 按首页头条推荐位取有封面图的文章, 第一篇大图 + 右侧列表 #}
+    {% set featured = article_select(feature="headline", cover=true, limit=6) %}
+    {% if featured %}
+      <section class="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {% set head = featured[0] %}
+        {# 大图头条: 8栏, 16:9 比例 (aspect-video), 全宽下约 430px, 主流门户高度 #}
+        <a href="{{ head.url }}" class="group relative block rounded-lg overflow-hidden md:col-span-8 aspect-video">
+          {% if head.cover_url %}
+            <img
+              src="{{ head.cover_url }}"
+              alt="{{ head.title }}"
+              class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+            >
+          {% else %}
+            <div class="w-full h-full bg-neutral flex items-center justify-center">
+              <span class="text-neutral-content/40 text-sm">无图</span>
+            </div>
+          {% endif %}
+          <div class="absolute inset-0 bg-linear-to-t from-black/85 via-black/30 to-transparent"></div>
+          <div class="absolute bottom-0 p-6 text-white">
+            <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold line-clamp-2">{{ head.title }}</h2>
+            {% if head.description %}
+              <p class="text-sm md:text-base text-white/70 mt-3 line-clamp-2">{{ head.description }}</p>
+            {% endif %}
+          </div>
+        </a>
+        {# 右侧列表: 4栏, 跟随大图等高, 5条 flex-1 均分填满 #}
+        <div class="md:col-span-4 flex flex-col bg-base-100 rounded-lg border border-base-300 overflow-hidden">
+          {% for a in featured[1:] %}
+            <a
+              href="{{ a.url }}"
+              class="group flex gap-3 items-center flex-1 min-h-0 px-4 hover:bg-base-200/60 transition-colors border-b border-base-200 last:border-b-0"
+            >
+              {% if a.cover_url %}
+                <img src="{{ a.cover_url }}" alt="{{ a.title }}" class="w-24 h-16 object-cover rounded shrink-0">
+              {% else %}
+                <div class="w-24 h-16 bg-base-200 rounded shrink-0 flex items-center justify-center">
+                  <span class="text-base-content/30 text-[10px]">无图</span>
+                </div>
+              {% endif %}
+              <div class="space-y-1 min-w-0 flex-1">
+                <h3 class="text-sm font-semibold group-hover:text-primary line-clamp-2 leading-snug">
+                  {{ a.title }}
+                </h3>
+                <span class="text-xs text-base-content/40">{{ a.published_at }}</span>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {# ===== 下方层: 资讯流(3栏) + 侧栏(1栏) 左右分栏 ===== #}
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {# 最新资讯流: 左侧占3栏, 内部双列 #}
+      <section class="lg:col-span-3">
+        <div class="flex items-center justify-between mb-4 border-b border-base-300 pb-2">
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <span class="w-1 h-5 bg-primary rounded"></span>最新资讯
+          </h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+          {% for a in article_select(limit=10) %}
+            <article class="flex gap-3 py-3 border-b border-base-200">
+              {% if a.cover_url %}
+                <a href="{{ a.url }}" class="shrink-0">
+                  <img src="{{ a.cover_url }}" alt="{{ a.title }}" class="w-32 h-24 object-cover rounded">
+                </a>
+              {% endif %}
+              <div class="space-y-1.5 min-w-0 flex-1">
+                <h3 class="text-base font-semibold leading-snug">
+                  <a href="{{ a.url }}" class="hover:text-primary line-clamp-2">{{ a.title }}</a>
+                </h3>
+                {% if a.description %}
+                  <p class="text-xs text-base-content/50 line-clamp-2">{{ a.description }}</p>
+                {% endif %}
+                <p class="text-xs text-base-content/40">{{ a.published_at }}</p>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      {# 右侧栏: 占1栏, 纵向堆叠 #}
+      <aside class="space-y-6">
+        {# 热门阅读 #}
+        <section class="bg-base-100 rounded-lg border border-base-300 p-4">
+          <h3 class="font-bold mb-3 flex items-center gap-2">
+            <span class="w-1 h-4 bg-error rounded"></span>热门阅读
+          </h3>
+          <ol class="space-y-2.5">
+            {% for a in article_select(limit=10, order_by="views") %}
+              <li class="flex items-start gap-2 text-sm">
+                <span
+                  class="text-xs font-bold {% if loop.index <= 3 %}text-error{% else %}text-base-content/30{% endif %}"
+                >{{ loop.index }}</span>
+                <a href="{{ a.url }}" class="hover:text-primary line-clamp-2 flex-1">{{ a.title }}</a>
+              </li>
+            {% endfor %}
+          </ol>
+        </section>
+
+        {# 专题 #}
+        {% set all_specials = special_select() %}
+        {% if all_specials %}
+          <section class="bg-base-100 rounded-lg border border-base-300 p-4">
+            <h3 class="font-bold mb-3 flex items-center gap-2">
+              <span class="w-1 h-4 bg-primary rounded"></span>专题推荐
+            </h3>
+            <ul class="space-y-2">
+              {% for s in all_specials[:5] %}
+                <li>
+                  <a href="/s/{{ s.slug }}" class="flex items-center gap-2 text-sm hover:text-primary">
+                    {% if s.cover_url %}
+                      <img src="{{ s.cover_url }}" class="w-12 h-12 object-cover rounded shrink-0">
+                    {% endif %}
+                    <span class="line-clamp-2">{{ s.title or s.name }}</span>
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endif %}
+
+        {# 标签云 #}
+        {% set site_tags = tag_select() %}
+        {% if site_tags %}
+          <section class="bg-base-100 rounded-lg border border-base-300 p-4">
+            <h3 class="font-bold mb-3 flex items-center gap-2">
+              <span class="w-1 h-4 bg-accent rounded"></span>标签
+            </h3>
+            <div class="flex flex-wrap gap-1.5">
+              {% for t in site_tags %}
+                <a href="/t/{{ t.slug }}" class="badge badge-outline badge-sm hover:badge-primary">{{ t.name }}</a>
+              {% endfor %}
+            </div>
+          </section>
+        {% endif %}
+      </aside>
+    </div>
+  </div>
+{% endblock %}

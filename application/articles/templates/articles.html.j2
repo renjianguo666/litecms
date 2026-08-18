@@ -1,0 +1,97 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/table.html.j2' import render_table_page with context %}
+  {% from 'macros/base/pagination.html.j2' import render_pagination with context %}
+  {% call render_table_page(name="articles",label="文章",) %}
+    <div x-data="batchCopyLinks" class="flex flex-col gap-3">
+      <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm">
+        <table class="table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" class="checkbox checkbox-sm" x-on:change="toggleAll"></th>
+              <th>标题</th>
+              <th>栏目</th>
+              <th>浏览量</th>
+              <th>创建用户</th>
+              <th>创建时间</th>
+              <th class="text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in pagination.items %}
+              <tr class="hover:bg-base-300">
+                <td>
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    data-href="{{ row.absolute_url }}"
+                    data-category="{{ breadcrumbs(row.category_id) | map(attribute='name') | join(' / ') }}"
+                  >
+                </td>
+                <td>{{ row.title }}</td>
+                <td>{{ breadcrumbs(row.category_id) | map(attribute='name') | join(' / ') }}</td>
+                <td>{{ row.views }}</td>
+                <td>{{ row.creator_username }}</td>
+                <td>{{ row.created_at }}</td>
+                <td class="py-0">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <a
+                      class="btn btn-sm btn-dash btn-info"
+                      href="{{ row.absolute_url }}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      查看
+                    </a>
+                    {% if request.user.has_permission("articles:update") %}
+                      <a
+                        class="btn btn-dash btn-sm btn-info"
+                        href='{{ url_for("articles:edit", item_id=row.id) }}'
+                        hx-vals="js:{url: location.pathname + location.search}"
+                      >
+                        编辑
+                      </a>
+                    {% endif %}
+                    {% if request.user.has_permission("articles:destroy") %}
+                      <button
+                        type="button"
+                        class="btn btn-dash btn-sm btn-warning"
+                        hx-get='{{ url_for("articles:destroy_form", item_id=row.id) }}?dialog=true'
+                        hx-target="#dialog-container"
+                        hx-select="dialog"
+                        hx-push-url="false"
+                      >
+                        删除
+                      </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="flex justify-between">
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class="btn btn-soft btn-sm"
+            x-on:click="copyLinks"
+          >
+            复制链接
+          </button>
+          <button
+            type="button"
+            class="btn btn-soft btn-sm"
+            x-on:click="copyLinksWithCategory"
+          >
+            复制栏目+链接
+          </button>
+        </div>
+
+        {{ render_pagination(pagination) }}
+      </div>
+    </div>
+  {% endcall %}
+{% endblock %}

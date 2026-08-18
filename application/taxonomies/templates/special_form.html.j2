@@ -1,0 +1,39 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/form.html.j2' import render_form_page with context %}
+  {% from 'macros/base/form.html.j2' import render_field with context %}
+
+  {% call render_form_page("form", "specials", "专题") %}
+    <form
+      class="grid grid-cols-1 lg:grid-cols-12 gap-6"
+      action="{{ url_for('specials:create') if not request.path_params.item_id else url_for('specials:update', item_id=request.path_params.item_id) }}"
+      method="post"
+      hx-disabled-elt="[type=submit]"
+    >
+      <input type="hidden" name="url" value="{{ request.query_params.url or url_for('specials:index') | e }}">
+      <div class="lg:col-span-8 flex flex-col gap-6">
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+          <div class="card-body p-6 flex flex-col gap-4">
+            {{ render_field(form.name) }}
+            {{ render_field(form.title) }}
+            {{ render_field(form.description) }}
+            {{ render_field(form.cover_url) }}
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-4 flex flex-col gap-6">
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+          <div class="card-body p-6 flex flex-col gap-5">
+            {{ render_field(form.slug) }}
+            {{ render_field(form.template) }}
+            {{ render_field(form.priority) }}
+            {{ render_field(form.is_active) }}
+            {{ form.submit(class="btn btn-neutral") }}
+          </div>
+        </div>
+      </div>
+    </form>
+  {% endcall %}
+{% endblock %}

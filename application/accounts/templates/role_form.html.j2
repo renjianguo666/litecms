@@ -1,0 +1,123 @@
+{% extends "base.html.j2" %}
+
+{%- block workspace -%}
+  {%- from 'macros/form.html.j2' import render_form_page with context -%}
+  {%- from "macros/base/dialog.html.j2" import render_dialog with context -%}
+  {%- from "macros/base/form.html.j2" import render_field with context -%}
+
+  {%- macro render_permission_groups(field, permissions) -%}
+    <div
+      x-data="permissionPicker({{ (field.data or [])|tojson|forceescape }})"
+      class="flex flex-col gap-1.5"
+    >
+      <span class="text-sm font-medium text-base-content">权限设置</span>
+      <div class="flex flex-col gap-3">
+        {% for module, perms in permissions %}
+          <fieldset class="fieldset border border-base-300 rounded-(--radius-field) px-4 py-3">
+            <legend class="fieldset-legend px-1">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm checkbox-neutral"
+                  :checked="isGroupChecked('{{ module }}')"
+                  :indeterminate.prop="isGroupIndeterminate('{{ module }}')"
+                  @change="toggleGroup('{{ module }}', $el.checked)"
+                >
+                <span class="text-sm font-medium">{{ module }}</span>
+                <span class="text-xs text-base-content/50">
+                  (<span x-text="checkedCount('{{ module }}')"></span>/{{ perms|length }})
+                </span>
+              </label>
+            </legend>
+            <div class="grid grid-cols-2 gap-2 mt-2 sm:grid-cols-3 lg:grid-cols-4">
+              {% for perm in perms %}
+                <label
+                  class="flex items-center gap-2 cursor-pointer text-sm rounded-md px-2 py-1.5 hover:bg-base-200/50"
+                >
+                  <input
+                    type="checkbox"
+                    name="{{ field.name }}"
+                    value="{{ perm.id }}"
+                    data-group="{{ module }}"
+                    x-model="selected"
+                    class="checkbox checkbox-sm checkbox-neutral"
+                  >
+                  <span>{{ perm.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </fieldset>
+        {% endfor %}
+      </div>
+      {%- for error in field.errors %}<p class="text-xs text-error">{{ error }}</p>{%- endfor %}
+    </div>
+  {%- endmacro %}
+
+  {%
+    set action_url = url_for('roles:update', item_id=request.path_params.item_id) if request.path_params.item_id else url_for('roles:create')
+  %}
+
+  {%- if request.query_params.dialog -%}
+    {%
+      call render_dialog(
+          title="编辑角色" if request.path_params.item_id else "新增角色",
+          extra_class="max-w-3xl max-h-[85vh]!"
+      )
+    %}
+      <form
+        id="dialog-form"
+        hx-post='{{ action_url ~ "?dialog=true"}}'
+        hx-target="this"
+        hx-swap="outerHTML"
+        hx-select="#dialog-form"
+        hx-disabled-elt="[type=submit]"
+        class="flex flex-col flex-1 overflow-hidden"
+      >
+        <div class="flex flex-col gap-4 p-6 overflow-y-auto">
+          {%- if form.errors -%}
+            <div class="mb-4">
+              {% for fieldname, errors in form.errors.items() if form[fieldname].type == 'HiddenField' -%}
+                {%- for error in errors %}<div class="text-error text-sm">{{ error }}</div>{%- endfor %}
+              {%- endfor %}
+            </div>
+          {%- endif -%}
+
+          {{ render_field(form.name) }}
+          {{ render_field(form.description) }}
+          {{ render_permission_groups(form.permissions, permissions) }}
+        </div>
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-base-300 shrink-0">
+          <button type="button" @click="$el.closest('dialog').close()" class="btn">取消</button>
+          <button type="submit" class="btn btn-neutral">保存提交</button>
+        </div>
+      </form>
+    {% endcall %}
+  {%- else -%}
+    {% call render_form_page(form, "roles", "角色") %}
+      <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body">
+          <form
+            action="{{action_url}}"
+            method="post"
+            class="flex flex-col gap-3"
+            hx-disabled-elt="[type=submit]"
+          >
+            <input type="hidden" name="url" value="{{ request.query_params.url or url_for('roles:index') }}">
+
+            {%- if form.errors -%}
+              <div class="mb-4">
+                {% for fieldname, errors in form.errors.items() if form[fieldname].type == 'HiddenField' -%}
+                  {%- for error in errors %}<div class="text-error text-sm">{{ error }}</div>{%- endfor %}
+                {%- endfor %}
+              </div>
+            {%- endif -%}
+            {{ render_field(form.name) }}
+            {{ render_field(form.description) }}
+            {{ render_permission_groups(form.permissions, permissions) }}
+            {{ form.submit(class="btn btn-neutral") }}
+          </form>
+        </div>
+      </div>
+    {% endcall %}
+  {%- endif -%}
+{%- endblock -%}

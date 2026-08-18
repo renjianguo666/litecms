@@ -1,0 +1,32 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/table.html.j2' import render_table_page with context %}
+
+  {% macro custom_actions(row) %}
+    {% if request.user.has_permission("specials:update") %}
+    <a
+      class="btn btn-sm btn-dash btn-info"
+      href="{{ url_for('specials:manage_contents', item_id=row.id) }}"
+    >
+      内容
+    </a>
+    {% endif %}
+  {% endmacro %}
+
+  {{
+    render_table_page(
+        name="specials",
+        label="专题",
+        pagination=pagination,
+        titles=[
+            ("name", "专题名称"),
+            ("slug", "slug"),
+            ("is_active", "状态"),
+            ("priority", "优先级"),
+            ("created_at", "创建时间")
+        ],
+        custom_actions=custom_actions
+    )
+  }}
+{% endblock %}

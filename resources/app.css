@@ -1,0 +1,162 @@
+@import "tailwindcss";
+@plugin "daisyui";
+@plugin "@iconify/tailwind4";
+@import "vanilla-calendar-pro/styles/index.css";
+
+@layer base {
+    [x-cloak] {
+        display: none !important;
+    }
+
+    :root {
+        --sidebar-width: 250px;
+        --transition-speed: 0.3s;
+    }
+}
+
+@layer components {
+    .app-sidebar {
+        z-index: 50;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: var(--sidebar-width);
+        transform: translateX(-100%);
+        transition: transform var(--transition-speed) ease-in-out;
+    }
+
+    .app-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        margin-left: 0;
+        transition: margin-left var(--transition-speed) ease-in-out;
+    }
+
+    @media (min-width: 1024px) {
+        body.sidebar-expand-lg .app-sidebar {
+            transform: translateX(0);
+        }
+        body.sidebar-expand-lg .app-wrapper {
+            margin-left: var(--sidebar-width);
+        }
+        body.sidebar-expand-lg.sidebar-collapse .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-expand-lg.sidebar-collapse .app-wrapper {
+            margin-left: 0;
+        }
+    }
+
+    @media (max-width: 1023px) {
+        body.sidebar-open .app-sidebar {
+            transform: translateX(0);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        body.sidebar-open .app-wrapper {
+            margin-left: 0;
+        }
+    }
+
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        background-color: color-mix(
+            in oklab,
+            var(--color-base-content) 20%,
+            transparent
+        );
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+        background-color: color-mix(
+            in oklab,
+            var(--color-base-content) 40%,
+            transparent
+        );
+    }
+
+    .sidebar-scroll {
+        scrollbar-color: color-mix(
+                in oklab,
+                var(--color-base-content) 20%,
+                transparent
+            )
+            transparent;
+        scrollbar-width: thin;
+    }
+
+    .bg-texture-mesh {
+        background-image:
+            linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+        background-size: 30px 30px;
+    }
+
+    /* daisyUI 5 的 calendar 组件给 VCP 箭头的 :before 加了 L 形 border
+       (border:2px solid; border-width:0 2px 2px 0),与 VCP 自带的
+       SVG background-image 箭头叠加,导致一个箭头位置出现两层图案。
+       这里强制清掉 border,只保留 VCP 的 SVG 箭头。
+       !important 必要:该规则在 @layer components,而 daisyUI 的冲突规则
+       在 @layer utilities(更高层),不用 !important 无法覆盖。 */
+    .vc-arrow:before {
+        border: 0 !important;
+    }
+
+
+    /* popover 容器：用 CSS Anchor Positioning 相对 input 定位。
+       浏览器在 paint 前算好位置，无首帧闪烁、无 JS 定位代码。
+       - position-anchor: 绑定锚点（input 的 anchor-name）
+       - position-area: 默认下方左对齐（block-end = 下方，span-inline-start = 左对齐）
+       - position-try-fallbacks: 下方空间不够时翻到上方
+       浏览器支持：Chrome 125+/Safari 26+/Firefox 147+（不支持则退化为默认居中，popover 仍可用） */
+    .vc-popover {
+        margin: 0.5rem;
+        padding: 0;
+        background: transparent;
+        border: 0;
+        max-width: none;
+        max-height: none;
+        width: anchor-size(width);
+        position-area: block-end span-inline-start;
+        position-try-fallbacks: block-start;
+    }
+
+    /* VCP 日历本体圆角对齐 select 容器（field 圆角，而非 daisyUI 默认的 box 圆角）*/
+    .vc-popover .vc {
+        border-radius: var(--radius-box) !important;
+    }
+
+    /* combobox 下拉容器：popover + CSS Anchor Positioning（和 .vc-popover 统一架构）。
+       popover="auto" 进 top layer，绕过祖先 overflow:hidden 裁切。
+       浏览器 paint 前定位，scroll/resize 自动跟随，零 JS。 */
+    .combobox-popover {
+        margin: 0.5rem;
+        padding: 0.25rem;
+        background: var(--color-base-100);
+        border: var(--border) solid var(--color-base-300);
+        border-radius: var(--radius-box);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        max-height: 18rem;
+        overflow-y: auto;
+        width: anchor-size(width);
+        position-area: block-end span-inline-start;
+        position-try-fallbacks: block-start;
+    }
+
+    /* 触发器在 popover 打开时显示焦点轮廓（替代原 Alpine :style outline）。
+       :has() 匹配包含打开 popover 的 combobox 根，给 box 加 outline。
+       特异性 (0,3,0) 确保覆盖 .input 的默认样式。 */
+       /* 触发器在 popover 打开时显示焦点轮廓... */
+    [data-combobox-root]:has(.combobox-popover:popover-open) [data-combobox-box] {
+        outline: 2px solid var(--color-base-content);
+        outline-offset: 2px;
+    }
+
+}

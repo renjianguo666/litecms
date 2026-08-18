@@ -1,0 +1,11 @@
+{% extends "base.html.j2" %}
+
+{%- block workspace -%}
+  {%- from 'macros/destroy.html.j2' import render_destroy_dialog, render_destroy_page with context -%}
+
+  {%- if request.query_params.dialog -%}
+    {{ render_destroy_dialog(form, "pages", "单页") }}
+  {%- else -%}
+    {{ render_destroy_page(form, "pages", "单页") }}
+  {%- endif -%}
+{%- endblock -%}

@@ -1,0 +1,249 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  <div class="flex flex-col gap-3">
+    <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <h2 class="text-xl font-semibold ps-2">
+        模板管理
+      </h2>
+      <div role="tablist" class="tabs tabs-border">
+        {% for key, val in kinds.items() %}
+          <a
+            href="{{ url_for('templates:index') ~ '?kind=' ~ key }}"
+            role="tab"
+            class="tab {{ 'tab-active' if kind == key else '' }}"
+          >{{ val }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div class="lg:col-span-3">
+        <div class="card bg-base-100 border border-base-300 shadow-sm sticky top-4 rounded-box">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-base-300 h-12">
+            <span class="font-medium text-sm">{{ kinds[kind] }}</span>
+            {% if kind not in ("tags", "index") and request.user.has_permission("templates:create") %}
+              <button
+                class="btn btn-neutral btn-xs"
+                hx-get="{{ url_for('templates:new', kind=kind) }}"
+                hx-target="#dialog-container"
+                hx-push-url="false"
+              >
+                <span class="icon-[lucide--plus] text-lg"></span>
+                新增模板
+              </button>
+            {% endif %}
+          </div>
+
+          <div class="p-2 overflow-y-auto" style="max-height: calc(100vh - 14rem)">
+            <ul
+              class="menu menu-sm w-full p-0"
+              x-data="{ activeTarget: {{ template_path | default('', true) | tojson | forceescape }} }"
+              hx-boost="true"
+              hx-target="#editor"
+              hx-select="#editor > *"
+              hx-swap="innerHTML"
+            >
+              {% if kind == "categories" %}
+                {% for key, group in templates|sort|groupby(1) %}
+                  <li>
+                    <details open>
+                      <summary class="py-2">{{ key }}</summary>
+                      <ul>
+                        {% for item in group %}
+                          {% set tpl = item|reverse|join('/') %}
+                          <li>
+                            <a
+                              class="py-2"
+                              :class="activeTarget === '{{ tpl }}' ? 'menu-active' : ''"
+                              @click="activeTarget = '{{ tpl }}'"
+                              href="{{ url_for('templates:index') }}?kind={{ kind }}&target={{ tpl }}"
+                            >
+                              {{ item[0] }}
+                            </a>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    </details>
+                  </li>
+                {% endfor %}
+              {% else %}
+                {% for tpl, _ in templates %}
+                  {% set st = fixed_states.get(tpl, "none") %}
+                  <li>
+                    <!-- menu-active/padding/radius 只作用于 li 的直接子元素,
+                         故状态类放 div 上, a 不再带 py-2/menu-active -->
+                    <div
+                      class="flex items-center gap-2 py-2"
+                      :class="activeTarget === '{{ tpl }}' ? 'menu-active' : ''"
+                    >
+                      <a
+                        class="flex-1"
+                        @click="activeTarget = '{{ tpl }}'"
+                        href="{{ url_for('templates:index') }}?kind={{ kind }}&target={{ tpl }}"
+                      >
+                        {{ tpl }}
+                        {% if kind in ("index", "tags") %}
+                          {% if st == "active" %}
+                            <span class="badge badge-success badge-xs">生效中</span>
+                          {% elif st == "disabled" %}
+                            <span class="badge badge-warning badge-xs">已禁用</span>
+                          {% else %}
+                            <span class="badge badge-ghost badge-xs">未创建</span>
+                          {% endif %}
+                        {% endif %}
+                      </a>
+                      {% if kind in ("index", "tags") and st != "none" and request.user.has_permission("templates:update") %}
+                        {% if st == "active" %}
+                          <form method="post" action="{{ url_for('templates:disable') }}" hx-swap="none">
+                            <input type="hidden" name="kind" value="{{ kind }}">
+                            <input type="hidden" name="name" value="{{ tpl }}">
+                            <button type="submit" class="btn btn-warning btn-xs">禁用</button>
+                          </form>
+                        {% else %}
+                          <form method="post" action="{{ url_for('templates:enable') }}" hx-swap="none">
+                            <input type="hidden" name="kind" value="{{ kind }}">
+                            <input type="hidden" name="name" value="{{ tpl }}">
+                            <button type="submit" class="btn btn-soft btn-xs">启用</button>
+                          </form>
+                        {% endif %}
+                      {% endif %}
+                    </div>
+                  </li>
+                {% endfor %}
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-9 h-[calc(100vh-10rem)]" id="editor">
+        {% if template_path %}
+          <div class="card bg-base-100 border border-base-300 shadow-sm flex flex-col h-full rounded-box">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
+              <span class="text-sm font-medium">
+                HTML / Jinja2
+                <strong id="unsaved-mark" class="text-warning hidden ml-1">*</strong>
+              </span>
+              <div class="flex items-center gap-3 text-xs text-base-content/60">
+                <span id="line-count-display">1 行</span>
+                <span class="text-base-300">|</span>
+                <span>Ctrl+S 保存</span>
+              </div>
+            </div>
+
+            {% if template_disabled %}
+              <div class="px-4 py-2 text-xs text-warning bg-warning/10 border-b border-base-300">
+                该模板已禁用，当前编辑的是备份内容（{{ template_path }}.bak），保存仅更新备份，点击「启用」后生效。
+              </div>
+            {% endif %}
+
+            <div class="flex-1 relative overflow-hidden">
+              <form
+                id="template-form"
+                class="flex h-full text-sm leading-6 font-mono"
+                action="{{ url_for('templates:write') }}"
+                method="post"
+                hx-swap="none"
+              >
+                <div
+                  id="line-numbers"
+                  class="w-12 py-4 pr-2 pl-0 overflow-hidden bg-base-200 text-base-content/50 text-right select-none shrink-0 border-r border-base-300 leading-6 font-mono text-sm"
+                >
+                  <div>1</div>
+                </div>
+                <textarea
+                  id="code-editor"
+                  name="content"
+                  class="p-4 overflow-x-auto bg-transparent text-base-content whitespace-pre resize-none flex-1 border-0 leading-6 font-mono text-sm focus:outline-none w-full"
+                  spellcheck="false"
+                  {% if not request.user.has_permission("templates:update") %}disabled{% endif %}
+                >{{ template_content | default('', true) }}</textarea>
+                <input type="hidden" name="name" value="{{ template_path }}">
+                <input type="hidden" name="kind" value="{{ kind }}">
+              </form>
+            </div>
+          </div>
+        {% else %}
+          <div class="card bg-base-100 border border-base-300 shadow-sm flex flex-col items-center justify-center h-full rounded-box py-24">
+            <span class="icon-[lucide--file-code] text-6xl text-base-content/20 mb-4"></span>
+            <p class="text-base-content/60 text-sm">选择一个模板文件开始编辑</p>
+            <p class="text-base-content/60 text-sm mt-1">或点击「新增模板」创建新文件</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function initEditor() {
+      const textarea = document.getElementById("code-editor");
+      const lineNumbers = document.getElementById("line-numbers");
+      const lineCountDisplay = document.getElementById("line-count-display");
+      const unsavedMark = document.getElementById("unsaved-mark");
+      const form = document.getElementById("template-form");
+      if (!textarea) return;
+
+      function updateLineNumbers() {
+        const lines = textarea.value.split("\n").length;
+        lineNumbers.innerHTML = Array.from(
+          { length: lines },
+          (_, i) => `<div>${i + 1}</div>`
+        ).join("");
+        lineCountDisplay.textContent = `${lines} 行`;
+      }
+
+      function markUnsaved() {
+        unsavedMark?.classList.remove("hidden");
+      }
+
+      function markSaved() {
+        unsavedMark?.classList.add("hidden");
+      }
+
+      updateLineNumbers();
+
+      textarea.addEventListener("input", () => {
+        updateLineNumbers();
+        markUnsaved();
+      });
+
+      textarea.addEventListener("scroll", () => {
+        lineNumbers.scrollTop = textarea.scrollTop;
+      });
+
+      textarea.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+          e.preventDefault();
+          if (!textarea.disabled) {
+            // 直发请求, 不走 submit 事件派发: htmx.trigger(form,"submit") 会经
+            // form 增强监听器处理, 存在重复请求的可能
+            htmx.ajax("POST", form.action, { source: form, target: form });
+          }
+          return;
+        }
+
+        if (e.key === "Tab") {
+          e.preventDefault();
+          if (textarea.disabled) return;
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          textarea.value =
+            textarea.value.slice(0, start) + "  " + textarea.value.slice(end);
+          textarea.selectionStart = textarea.selectionEnd = start + 2;
+          updateLineNumbers();
+          markUnsaved();
+        }
+      });
+
+      document.body.addEventListener("showToast", (e) => {
+        if (e.detail.type === "success") markSaved();
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", initEditor);
+    document.body.addEventListener("htmx:afterSettle", (e) => {
+      if (e.detail.target.id === "editor") initEditor();
+    });
+  </script>
+{% endblock %}

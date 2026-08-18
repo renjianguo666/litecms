@@ -1,0 +1,161 @@
+<ul
+  x-data="navMenu"
+  @click="if(!isDesktop) sidebarOpen = false"
+  class="menu w-full px-2 py-4 gap-2 text-sm"
+>
+  {% if request.user.has_permission("dashboard:view") %}
+  <li>
+    <a
+      href="/admin"
+      @click="navigate('/admin')"
+      :class="{ 'menu-active': isActive('/admin', true) }"
+    >
+      <span class="icon-[lucide--layout-dashboard] text-lg opacity-75"></span>
+      仪表盘
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("articles:view") %}
+  <li>
+    <a
+      href="{{ url_for('articles:index') }}"
+      @click="navigate('{{ url_for('articles:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('articles:index') }}') }"
+    >
+      <span class="icon-[lucide--file-text] text-lg opacity-75"></span>
+      文章管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("categories:view") %}
+  <li>
+    <a
+      href="{{ url_for('categories:index') }}"
+      @click="navigate('{{ url_for('categories:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('categories:index') }}') }"
+    >
+      <span class="icon-[lucide--folder] text-lg opacity-75"></span>
+      栏目管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("pages:view") %}
+  <li>
+    <a
+      href="{{ url_for('pages:index') }}"
+      @click="navigate('{{ url_for('pages:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('pages:index') }}') }"
+    >
+      <span class="icon-[lucide--square-pen] text-lg opacity-75"></span>
+      单页管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("specials:view") %}
+  <li>
+    <a
+      href="{{ url_for('specials:index') }}"
+      @click="navigate('{{ url_for('specials:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('specials:index') }}') }"
+    >
+      <span class="icon-[lucide--library] text-lg opacity-75"></span>
+      专题管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("tags:view") %}
+  <li>
+    <a
+      href="{{ url_for('tags:index') }}"
+      @click="navigate('{{ url_for('tags:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('tags:index') }}') }"
+    >
+      <span class="icon-[lucide--tags] text-lg opacity-75"></span>
+      标签管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("features:view") %}
+  <li>
+    <a
+      href="{{ url_for('features:index') }}"
+      @click="navigate('{{ url_for('features:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('features:index') }}') }"
+    >
+      <span class="icon-[lucide--star] text-lg opacity-75"></span>
+      推荐管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("templates:view") %}
+  <li>
+    <a
+      href="{{ url_for('templates:index') }}"
+      @click="navigate('{{ url_for('templates:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('templates:index') }}') }"
+    >
+      <span class="icon-[lucide--file-code] text-lg opacity-75"></span>
+      模板管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("users:view") %}
+  <li>
+    <a
+      href="{{ url_for('users:index') }}"
+      @click="navigate('{{ url_for('users:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('users:index') }}') }"
+    >
+      <span class="icon-[lucide--users] text-lg opacity-75"></span>
+      用户管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("roles:view") %}
+  <li>
+    <a
+      href="{{ url_for('roles:index') }}"
+      @click="navigate('{{ url_for('roles:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('roles:index') }}') }"
+    >
+      <span class="icon-[lucide--shield] text-lg opacity-75"></span>
+      角色管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("seo:view") %}
+  <li>
+    <a
+      href="{{ url_for('seo:index') }}"
+      @click="navigate('{{ url_for('seo:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('seo:index') }}') }"
+    >
+      <span class="icon-[lucide--search] text-lg opacity-75"></span>
+      SEO管理
+    </a>
+  </li>
+  {% endif %}
+
+  {% if request.user.has_permission("settings:view") %}
+  <li>
+    <a
+      href="{{ url_for('settings:index') }}"
+      @click="navigate('{{ url_for('settings:index') }}')"
+      :class="{ 'menu-active': isActive('{{ url_for('settings:index') }}') }"
+    >
+      <span class="icon-[lucide--settings] text-lg opacity-75"></span>
+      系统设置
+    </a>
+  </li>
+  {% endif %}
+</ul>

@@ -1,0 +1,71 @@
+{% extends "web_base.html" %}
+
+{% block title %}{{ special.title or special.name }} - 专题 - {{ settings.site_name }}{% endblock %}
+{% block description %}{{ special.description or '' }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+  <div class="lg:col-span-3">
+    {# 专题头部 banner #}
+    <div class="relative rounded-lg overflow-hidden mb-5 h-48 md:h-64 bg-neutral">
+      {% if special.cover_url %}
+        <img src="{{ special.cover_url }}" alt="{{ special.name }}" class="w-full h-full object-cover" />
+      {% endif %}
+      <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+      <div class="absolute bottom-0 p-5 text-white">
+        <span class="text-xs px-2 py-0.5 bg-primary rounded">专题</span>
+        <h1 class="text-2xl md:text-3xl font-bold mt-2">{{ special.title or special.name }}</h1>
+        {% if special.description %}
+          <p class="text-sm text-white/70 mt-1 line-clamp-2">{{ special.description }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="bg-base-100 rounded-lg border border-base-300 divide-y divide-base-200">
+      {% for a in pagination %}
+      <article class="p-4 flex gap-4 hover:bg-base-200/50 transition">
+        {% if a.cover_url %}
+          <a href="{{ a.url }}" class="shrink-0">
+            <img src="{{ a.cover_url }}" alt="{{ a.title }}" class="w-40 h-28 object-cover rounded" />
+          </a>
+        {% endif %}
+        <div class="flex-1 min-w-0 space-y-1.5">
+          <h2 class="text-lg font-semibold leading-snug">
+            <a href="{{ a.url }}" class="hover:text-primary">{{ a.title }}</a>
+          </h2>
+          {% if a.description %}
+            <p class="text-sm text-base-content/50 line-clamp-2">{{ a.description }}</p>
+          {% endif %}
+          <div class="flex items-center gap-3 text-xs text-base-content/40">
+            <span class="text-primary">{{ a.category.name }}</span>
+            <span>{{ a.published_at }}</span>
+            <span>{{ a.creator.username }}</span>
+          </div>
+        </div>
+      </article>
+      {% else %}
+        <div class="p-12 text-center text-base-content/40 text-sm">该专题下暂无文章</div>
+      {% endfor %}
+    </div>
+
+    {% include "web_pagination.html" with context %}
+  </div>
+
+  <aside class="space-y-6">
+    <section class="bg-base-100 rounded-lg border border-base-300 p-4">
+      <h3 class="font-bold mb-3 flex items-center gap-2">
+        <span class="w-1 h-4 bg-primary rounded"></span>最新文章
+      </h3>
+      <ul class="space-y-2.5">
+        {% for a in article_select(limit=8) %}
+        <li>
+          <a href="{{ a.url }}" class="text-sm hover:text-primary line-clamp-2">{{ a.title }}</a>
+          <p class="text-xs text-base-content/40 mt-0.5">{{ a.published_at }}</p>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

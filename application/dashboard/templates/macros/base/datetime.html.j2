@@ -1,0 +1,46 @@
+{#
+  Vanilla Calendar Pro 日期时间选择器宏
+  依赖：
+    - app.css 中 .vc-popover / .vc-arrow:before 规则
+    - app.js 中 initVcDateTimePickers() 初始化
+    - vanilla-calendar-pro npm 包
+
+  用法：
+    {% from "_macros/datetime.html.j2" import datetime %}
+    {{ datetime(form.published_at) }}
+
+#}
+{%-
+  macro render_datetime(
+    field,
+    wrapper_class="flex flex-col gap-1.5",
+    label_class="text-sm font-medium text-base-content",
+    placeholder="点击选择"
+  )
+-%}
+  {%- set anchor_name = "--vc-anchor-" ~ field.id -%}
+  {%- set popover_id = "vc-popover-" ~ field.id -%}
+  {%- set display_id = field.id ~ "_display" -%}
+  {%- set display_value = field.data or '' -%}
+  <div class="{{ wrapper_class }}">
+    <label class="{{ label_class }}" for="{{ display_id }}">{{ field.label.text|safe }}
+      {%- if field.flags.required -%}<span class="text-error ml-1">*</span>{%- endif -%}
+    </label>
+    <div class="input w-full cursor-pointer" style="anchor-name: {{ anchor_name }}">
+      <button
+        type="button"
+        popovertarget="{{ popover_id }}"
+        id="{{ display_id }}"
+        class="grow h-full text-left bg-transparent border-0 p-0 outline-none cursor-pointer {{ 'text-base-content' if display_value else 'text-base-content/40' }}"
+      >
+        {{ display_value or placeholder }}
+      </button>
+    </div>
+    <input type="hidden" name="{{ field.name }}" id="{{ field.id }}" value="{{ display_value }}">
+    <div popover="auto" id="{{ popover_id }}" class="vc-popover" style="position-anchor: {{ anchor_name }}">
+      <div class="vc" data-vc-inline data-vc-target="{{ field.id }}"></div>
+    </div>
+    {%- if field.description %}<p class="text-xs text-base-content/70">{{ field.description|safe }}</p>{%- endif -%}
+    {%- for error in field.errors %}<p class="text-xs text-error">{{ error }}</p>{%- endfor %}
+  </div>
+{%- endmacro -%}

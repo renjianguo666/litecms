@@ -1,0 +1,33 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/table.html.j2' import render_table_page with context %}
+
+  {% macro custom_actions(row) %}
+    {% if request.user.has_permission("features:update") %}
+    <a
+      class="btn btn-sm btn-dash btn-info"
+      href="{{ url_for('features:manage_contents', item_id=row.id) }}"
+    >
+      内容
+    </a>
+    {% endif %}
+  {% endmacro %}
+
+  {{
+    render_table_page(
+        name="features",
+        label="推荐",
+        titles=[
+            ("name", "名称"),
+            ("slug", "标识"),
+            ("is_active", "是否启用"),
+            ("created_at", "创建时间"),
+
+        ],
+        pagination=pagination,
+        custom_actions=custom_actions,
+        use_dialog="dialog-container"
+    )
+  }}
+{% endblock %}

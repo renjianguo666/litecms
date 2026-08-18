@@ -1,0 +1,71 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/base/table.html.j2' import render_table with context %}
+  {% from 'macros/base/pagination.html.j2' import render_pagination with context %}
+  <div class="flex flex-col gap-3">
+    <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <h2 class="text-xl font-semibold ps-2">SEO管理</h2>
+      <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+        {% if request.user.has_permission("seo:push") %}
+        <button
+          type="button"
+          class="btn btn-soft"
+          hx-get="{{ url_for('seo:push_form') }}?dialog=true"
+          hx-target="#dialog-container"
+          hx-select="dialog"
+          hx-push-url="false"
+        >
+          <span class="icon-[lucide--file-input] text-lg"></span>
+          URL推送
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>
+              推送URL
+            </th>
+            <th>
+              推送状态
+            </th>
+            <th>
+              推送响应
+            </th>
+            <th>
+              推送时间
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if pagination.total == 0 %}
+            <tr>
+              <td colspan="4" class="text-center py-12 text-base-content/40">
+                <span class="icon-[lucide--inbox] text-4xl block mx-auto mb-2"></span>
+                暂无推送记录
+              </td>
+            </tr>
+          {% else %}
+            {% for item in pagination.items %}
+              <tr>
+                <td>{{ item.url }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.response }}</td>
+                <td>{{ item.created_at }}</td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+    <div class="join flex justify-end">
+      {% if pagination.total > 0 %}
+        {{ render_pagination(pagination) }}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

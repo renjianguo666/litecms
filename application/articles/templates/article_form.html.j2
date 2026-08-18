@@ -1,0 +1,223 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/form.html.j2' import render_form_page with context %}
+  {% from 'macros/base/form.html.j2' import render_field %}
+  {% from 'macros/base/checkboxes.html.j2' import render_checkboxes %}
+  {% from 'macros/base/combobox.html.j2' import render_combobox %}
+  {% from 'macros/base/tags.html.j2' import render_tags with context %}
+  {% from 'macros/base/datetime.html.j2' import render_datetime %}
+  {% from 'article_form_tree.html.j2' import render_radio_tree, render_checkbox_tree %}
+
+  {% macro render_thumbnail(field) %}
+    <div
+      class="flex flex-col gap-1.5 shrink-0 w-32 mr-2"
+      x-data="coverPicker"
+      data-upload-url="{{ url_for('media:upload') }}"
+      data-initial-url="{{ field.data or '' }}"
+    >
+      <span class="text-sm font-medium text-base-content">封面</span>
+      <input type="hidden" name="cover_url" :value="coverUrl">
+      <div class="relative flex-1 min-h-0">
+        <div
+          class="group relative w-full h-full rounded-box border border-base-300 overflow-hidden bg-base-200 cursor-pointer"
+          @click="openDialog()"
+        >
+          {# 有封面 #}
+          <template x-if="hasCover">
+            <img :src="coverUrl" class="w-full h-full object-cover" alt="">
+          </template>
+          {# 无封面 #}
+          <template x-if="!hasCover">
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-1">
+              <span class="icon-[lucide--image] text-3xl text-base-content/30"></span>
+              <span class="text-xs text-base-content/40">选择封面</span>
+            </div>
+          </template>
+          {# hover 替换遮罩 #}
+          <template x-if="hasCover">
+            <div class="absolute inset-0 rounded-box bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <span class="text-white text-xs font-medium flex items-center gap-1">
+                <span class="icon-[lucide--refresh-cw] text-sm"></span>
+                替换
+              </span>
+            </div>
+          </template>
+        </div>
+        <button
+          type="button"
+          x-show="hasCover"
+          x-cloak
+          @click.stop="removeCover()"
+          class="absolute -top-2 -right-2 z-10 btn btn-circle btn-xs btn-error"
+        >
+          ✕
+        </button>
+      </div>
+
+      {# 封面选择弹窗 - dialog showModal 渲染到 top layer,不影响父级布局 #}
+      <dialog x-ref="dialog" class="modal">
+        <div class="modal-box p-0 max-w-2xl flex flex-col" style="height: 600px">
+          <div class="flex items-center justify-between px-6 py-3 border-b border-base-300 shrink-0">
+            <h3 class="text-lg font-bold">选择封面</h3>
+            <button type="button" @click="closeDialog()" class="btn btn-sm btn-circle btn-ghost">
+              <span class="icon-[lucide--x] text-lg"></span>
+            </button>
+          </div>
+
+          <div class="flex-1 min-h-0 p-4">
+            <div class="w-full h-full rounded-box bg-base-200 border border-base-300 overflow-hidden flex items-center justify-center">
+              <template x-if="selectedUrl">
+                <img :src="selectedUrl" class="w-full h-full object-cover" alt="">
+              </template>
+              <template x-if="!selectedUrl">
+                <p class="text-base-content/40 text-sm text-center m-0">
+                  正文暂无图片,请从本地上传
+                </p>
+              </template>
+            </div>
+          </div>
+
+          <div class="px-4 pb-3 shrink-0">
+            <div class="flex gap-2 overflow-x-auto sidebar-scroll pb-1">
+              <button
+                type="button"
+                @click="$refs.uploadInput.click()"
+                class="shrink-0 w-20 h-20 rounded-box border-2 border-dashed border-base-300 hover:border-primary flex flex-col items-center justify-center gap-1 transition-colors"
+              >
+                <span class="icon-[lucide--upload] text-xl text-base-content/50"></span>
+                <span class="text-xs text-base-content/50">上传</span>
+              </button>
+              <template x-for="src in dialogImages" :key="src">
+                <div
+                  @click="selectImage(src)"
+                  :class="selectedUrl === src ? 'border-primary' : 'border-transparent'"
+                  class="shrink-0 w-20 h-20 rounded-box overflow-hidden border-2 hover:border-primary cursor-pointer transition-colors"
+                >
+                  <img :src="src" class="w-full h-full object-cover" alt="">
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 px-6 py-3 border-t border-base-300 shrink-0">
+            <button type="button" @click="closeDialog()" class="btn btn-ghost btn-sm">取消</button>
+            <button type="button" @click="confirmSelection()" class="btn btn-neutral btn-sm">
+              确认
+            </button>
+          </div>
+        </div>
+      </dialog>
+
+      <input
+        type="file"
+        x-ref="uploadInput"
+        accept="image/*"
+        class="hidden"
+        @change="handleUpload($event)"
+      >
+    </div>
+  {% endmacro %}
+
+  {%
+    set action_url = url_for('articles:update', item_id=request.path_params.item_id) if request.path_params.item_id else url_for('articles:create')
+  %}
+
+  {% call render_form_page(form, "articles", "文章") %}
+    <form
+      hx-post="{{ action_url }}"
+      hx-disabled-elt="[type=submit]"
+    >
+      {{ csrf_input | safe }}
+      <input type="hidden" name="url" value="{{ request.query_params.url or url_for('articles:index') | e }}">
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-8 xl:col-span-9">
+          <div class="card bg-base-100 border border-base-300 shadow-sm rounded-box">
+            <div class="card-body p-4 md:p-6 flex flex-col gap-4">
+              {{ render_field(form.title) }}
+
+              {# 内容编辑器 #}
+              <div class="flex flex-col gap-1.5">
+                <textarea
+                  name="text"
+                  class="hidden"
+                  data-editor
+                  data-config='{{ {"uploadUrl": url_for("media:upload"), "placeholder": "请输入内容...", "height": "300px"} | tojson }}'
+                >{{ form.text.data or '' }}</textarea>
+                {% for error in form.text.errors %}
+                  <p class="text-xs text-error">{{ error }}</p>
+                {% endfor %}
+              </div>
+
+              {# 基础信息 #}
+              <fieldset class="fieldset rounded-box bg-base-300 p-3 flex flex-col gap-4">
+                <legend class="fieldset-legend">基础信息</legend>
+
+                {{ render_field(form.description) }}
+
+                {# 来源作者状态时间 + 封面 #}
+                <div class="flex flex-col lg:flex-row gap-6">
+                  {# 左栏:来源作者 + 状态时间,撑满剩余 #}
+                  <div class="flex-1 min-w-0 grid grid-cols-2 gap-4">
+                    {{ render_field(form.source) }}
+                    {{ render_field(form.author) }}
+                    {{ render_field(form.status) }}
+                    {{ render_datetime(form.published_at) }}
+                  </div>
+
+                  {# 右栏:封面 #}
+                  {{ render_thumbnail(form.cover_url) }}
+                </div>
+              </fieldset>
+
+              {# 关联信息 #}
+              <fieldset class="fieldset rounded-box bg-base-300 p-3 flex flex-col gap-5">
+                <legend class="fieldset-legend">关联信息</legend>
+
+                {# 推荐位 #}
+                <div class="flex items-center gap-3">
+                  <span class="text-sm w-16 shrink-0">推荐位</span>
+                  {{ render_checkboxes(form.features) }}
+                </div>
+
+                {# 专题 #}
+                <div class="flex items-center gap-3">
+                  <span class="text-sm w-16 shrink-0">专题</span>
+                  {{ render_combobox(form.specials) }}
+                </div>
+
+                {# 标签 #}
+                {{ render_tags(form.tags) }}
+              </fieldset>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-4 xl:col-span-3">
+          <div class="card bg-base-100 border border-base-300 shadow-sm sticky top-0 rounded-box">
+            <div class="px-4 py-3 border-b border-base-300">
+              <span class="text-sm font-medium">选择栏目</span>
+            </div>
+
+            <div class="p-2 overflow-y-auto sidebar-scroll" style="max-height: calc(100vh - 260px)">
+              {% if request.path_params.item_id %}
+                {{ render_radio_tree(category_tree, selected_id=form.category.data) }}
+              {% else %}
+                {{ render_checkbox_tree(category_tree, selected_values=form.categories.data) }}
+                {% for error in form.categories.errors %}
+                  <p class="text-xs text-error">{{ error }}</p>
+                {% endfor %}
+              {% endif %}
+            </div>
+            <div class="p-4 border-t border-base-300">
+              {{ form.submit(class="btn btn-neutral w-full") }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  {% endcall %}
+
+  <script type="module" src="{{ url_for('static', file_path='js/editor.bundle.js') }}"></script>
+{% endblock %}

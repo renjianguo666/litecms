@@ -1,0 +1,73 @@
+{% macro render_table(data, titles, edit_url, delete_url, custom_actions=none, use_dialog=none) %}
+  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm">
+    <table class="table">
+      <thead>
+        <tr>
+          {% for title in titles %}
+            <th>{{ title[1] }}</th>
+          {% endfor %}
+          <th class="text-right">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data %}
+          <tr class="hover:bg-base-300">
+            {% for title in titles %}
+              <td>{{ row[title[0]] }}</td>
+            {% endfor %}
+            {% if custom_actions or edit_url or delete_url %}
+              <td class="py-0">
+                <div class="flex items-center justify-end gap-1.5">
+                  {%- if custom_actions %}
+                    {{ custom_actions(row) }}
+                  {%- endif %}
+
+                  {%- if edit_url %}
+                    {%- if use_dialog %}
+                      <button
+                        class="btn btn-dash btn-sm btn-info"
+                        hx-get="{{ url_for(edit_url, item_id=row.id) }}?dialog=true"
+                        hx-target="#{{ use_dialog }}"
+                        hx-select="dialog"
+                        hx-push-url="false"
+                      >
+                        编辑
+                      </button>
+                    {%- else %}
+                      <a
+                        class="btn btn-dash btn-sm btn-info"
+                        href="{{ url_for(edit_url, item_id=row.id) }}"
+                        hx-vals="js:{url: location.pathname + location.search}"
+                      >
+                        编辑
+                      </a>
+                    {%- endif %}
+                  {%- endif %}
+
+                  {%- if delete_url %}
+                    <button
+                      type="button"
+                      class="btn btn-dash btn-sm btn-warning"
+                      hx-get="{{ url_for(delete_url, item_id=row.id) }}?dialog=true"
+                      hx-target="#dialog-container"
+                      hx-select="dialog"
+                      hx-push-url="false"
+                    >
+                      删除
+                    </button>
+                  {% endif -%}
+                </div>
+              </td>
+            {% endif %}
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="{{ titles|length + 1 }}" class="text-center py-12 text-base-content/50">
+              暂无数据
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endmacro %}

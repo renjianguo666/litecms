@@ -1,0 +1,47 @@
+{% from "macros/base/form.html.j2" import render_field %}
+<dialog
+  id="createTemplateModal"
+  x-data
+  x-init="$el.showModal()"
+  @click="if ($event.target === $el) $el.close()"
+  @close="$el.closest('#dialog-container').innerHTML = ''"
+  class="modal"
+>
+  <div class="modal-box p-0 max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-base-300">
+      <h3 class="text-lg font-bold">创建新模板</h3>
+      <button
+        type="button"
+        @click="$el.closest('dialog').close()"
+        class="btn btn-sm btn-circle btn-ghost"
+      >
+        <span class="icon-[lucide--x] text-lg"></span>
+      </button>
+    </div>
+
+    <form
+      hx-post="{{ url_for('templates:create') }}"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-select="form"
+    >
+      {{ form.kind }}
+      <div class="flex flex-col gap-4 p-6">
+        {{ render_field(form.name) }}
+      </div>
+
+      <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-base-300">
+        <button
+          type="button"
+          @click="$el.closest('dialog').close()"
+          class="btn"
+        >
+          取消
+        </button>
+        <button type="submit" class="btn btn-neutral">
+          确认创建
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

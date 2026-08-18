@@ -1,0 +1,22 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/table.html.j2' import render_table_page with context %}
+
+  {{
+    render_table_page(
+        name="users",
+        label="用户",
+        titles=[
+            ("username", "用户名"),
+            ("is_superuser", "超级管理员"),
+            ("is_active", "状态"),
+            ("roles", "角色"),
+            ("alias", "别名"),
+            ("created_at", "创建时间")
+        ],
+        pagination=pagination,
+        use_dialog="dialog-container"
+    )
+  }}
+{% endblock %}

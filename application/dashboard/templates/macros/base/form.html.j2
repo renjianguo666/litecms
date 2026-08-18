@@ -1,0 +1,205 @@
+{% from 'macros/base/checkboxes.html.j2' import render_checkboxes %}
+{% from 'macros/base/combobox.html.j2' import render_combobox %}
+
+{% macro render_description(field) %}
+  {%- set description_class = kwargs.pop('class', '') or kwargs.pop('class_', '') -%}
+  {%- if field.description %}<p class="{{ description_class }}">{{ field.description|safe }}</p>{%- endif -%}
+{% endmacro %}
+
+{% macro render_errors(field) %}
+  {%- set error_class = kwargs.pop('class', '') or kwargs.pop('class_', '') -%}
+  {%- for error in field.errors %}<p class="{{ error_class }}">{{ error }}</p>{%- endfor %}
+{% endmacro %}
+
+{%-
+  macro render_field(
+    field,
+    wrapper_class="flex flex-col gap-1.5",
+    label_class="text-sm font-medium text-base-content",
+    description_class="text-xs text-base-content/70",
+    error_class="text-xs text-error"
+  )
+-%}
+  {%- set extra_class = kwargs.pop('class', '') or kwargs.pop('class_', '') -%}
+
+  {# 1. 隐藏字段 #}
+  {%- if field.type == 'HiddenField' -%}
+    {{ field(**kwargs)|safe }}
+  {%- elif field.type == 'SelectMultipleField' -%}
+    <div class="{{ wrapper_class }}">
+      <span class="{{ label_class }}">{{ field.label.text|safe }}
+        {%- if field.flags.required -%}<span class="text-error ml-1">*</span>{%- endif -%}
+      </span>
+      {% if field.option_widget.input_type == "checkbox" %}
+        {{ render_checkboxes(field) }}
+      {% else %}
+        {{ render_combobox(field) }}
+      {% endif %}
+      {{ render_description(field,class=description_class) }}
+      {{ render_errors(field,class=error_class) }}
+    </div>
+  {%- elif field.type == 'BooleanField' -%}
+    <div class="{{ wrapper_class }}">
+      <label class="flex items-center gap-3 cursor-pointer {{ label_class }}">
+        {{
+          field(class_=("checkbox checkbox-neutral " ~ ('checkbox-error ' if field.errors else '') ~ extra_class)|trim, **kwargs)|safe
+        }}
+        <span>{{ field.label.text|safe }}</span>
+      </label>
+      {{ render_description(field,class=description_class) }}
+      {{ render_errors(field,class=error_class) }}
+    </div>
+  {%- elif field.type == 'RadioField' -%}
+    <div class="{{ wrapper_class }}">
+      <fieldset class="fieldset border border-base-content/20 rounded-(--radius-field) px-4 py-3">
+        <legend class="fieldset-legend px-1 {{ label_class }}">
+          {{ field.label.text|safe }}
+          {% if field.flags.required %}<span class="text-error ml-1">*</span>{% endif %}
+        </legend>
+        <div class="flex flex-col gap-2 mt-1">
+          {% for item in field %}
+            <label class="flex items-center gap-3 cursor-pointer text-sm">
+              {{ item(class_=("radio " ~ ('radio-error ' if field.errors else '') ~ extra_class)|trim, **kwargs)|safe }}
+              <span>{{ item.label.text|safe }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      {{ render_description(field,class=description_class) }}
+      {{ render_errors(field,class=error_class) }}
+    </div>
+  {%- elif field.type in ['FormField', 'FieldList'] -%}
+    <div class="{{ wrapper_class }}">
+      <fieldset class="fieldset border border-base-300 rounded-box p-4 bg-base-100/50">
+        <legend class="fieldset-legend font-semibold px-2 {{ label_class }}">
+          {{ field.label.text|safe }}
+        </legend>
+
+        <div class="flex flex-col mt-2">
+          {%- for subfield in field if subfield.type != 'HiddenField' -%}
+            {{ render_field(subfield) }}
+          {%- endfor -%}
+        </div>
+      </fieldset>
+      {{ render_description(field,class=description_class) }}
+      {{ render_errors(field,class=error_class) }}
+    </div>
+    {# SelectField 单选下拉 #}
+  {%- elif field.type == 'SelectField' -%}
+    <div class="{{ wrapper_class }}">
+      <label for="{{ field.id }}" class="{{ label_class }}">{{ field.label.text|safe }}
+        {%- if field.flags.required -%}<span class="text-error ml-1">*</span>{%- endif -%}
+      </label>
+      {{
+        field(class_=("select w-full " ~ ('select-error ' if field.errors else '') ~ extra_class)|trim, **kwargs)|safe
+      }}
+      {{ render_description(field,class=description_class) }}
+      {{ render_errors(field,class=error_class) }}
+    </div>
+
+    {# TextAreaField 多行文本 #}
+  {%- elif field.type == 'TextAreaField' -%}
+    <div class="{{ wrapper_class }}">
+      <label for="{{ field.id }}" class="{{ label_class }}">{{ field.label.text|safe }}
+        {%- if field.flags.required -%}<span class="text-error ml-1">*</span>{%- endif -%}
+      </label>
+      {{
+        field(class_=("textarea w-full " ~ ('textarea-error ' if field.errors else '') ~ extra_class)|trim, **kwargs)|safe
+      }}
+      {{ render_description(field,class=description_class) }}
+      {{ render_errors(field,class=error_class) }}
+    </div>
+  {%-
+    elif field.type in ['StringField', 'PasswordField', 'IntegerField', 'DateTimeField', 'EmailField', 'FloatField', 'DecimalField', 'URLField', 'TelField', 'SearchField']
+  -%}
+    <div class="{{ wrapper_class }}">
+      <label for="{{ field.id }}" class="{{ label_class }}">{{ field.label.text|safe }}
+        {%- if field.flags.required -%}<span class="text-error ml-1">*</span>{%- endif -%}
+      </label>
+      {{ field(class_=("input w-full " ~ ('input-error ' if field.errors else '') ~ extra_class)|trim, **kwargs)|safe }}
+      {{ render_description(field,class=description_class) }}
+      {{ render_errors(field,class=error_class) }}
+    </div>
+  {% endif -%}
+{%- endmacro -%}
+
+{# ==========================================
+   2. 辅助排版宏：多列布局 (支持全参数透传)
+========================================== #}
+{%
+  macro render_fields_row(
+    fields,
+    row_class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4",
+    field_wrapper_class="flex flex-col gap-1.5",
+    field_label_class="text-sm font-medium text-base-content",
+    field_description_class="text-xs text-base-content/70",
+    field_error_class="text-xs text-error"
+  )
+%}
+  <div class="{{ row_class }}">
+    {% for field in fields %}
+      <div>
+        {{
+          render_field(
+              field,
+              wrapper_class=field_wrapper_class,
+              label_class=field_label_class,
+              description_class=field_description_class,
+              error_class=field_error_class
+          )
+        }}
+      </div>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{%
+  macro render_form(
+    form,
+    action="",
+    method="post",
+    form_class="flex flex-col gap-3",
+    field_wrapper_class="flex flex-col gap-1.5",
+    field_label_class="text-sm font-medium text-base-content",
+    field_description_class="text-xs text-base-content/70",
+    field_error_class="text-xs text-error",
+    show_submit=true
+  )
+%}
+  <form
+    action="{{ action }}"
+    method="{{ method }}"
+    class="{{ form_class }}"
+    hx-disabled-elt="[type=submit]"
+  >
+    {%- if form.errors -%}
+      <div class="mb-4">
+        {% for fieldname, errors in form.errors.items() if form[fieldname].type == 'HiddenField' -%}
+          {%- for error in errors %}<div class="text-error text-sm">{{ error }}</div>{%- endfor %}
+        {%- endfor %}
+      </div>
+    {%- endif -%}
+
+    {% if caller is defined %}
+      {{ caller() }}
+    {% endif %}
+
+    {% for field in form if field.type != "SubmitField" %}
+      {{
+        render_field(
+            field,
+            wrapper_class=field_wrapper_class,
+            label_class=field_label_class,
+            description_class=field_description_class,
+            error_class=field_error_class
+        )
+      }}
+    {% endfor %}
+
+    {%- if show_submit -%}
+      {%- for field in form if field.type == "SubmitField" -%}
+        {{ field(class="btn btn-neutral") }}
+      {% endfor %}
+    {%- endif -%}
+  </form>
+{% endmacro %}

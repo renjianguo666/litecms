@@ -1,0 +1,95 @@
+{# 创建新标签按钮宏（搜索无完全匹配时显示）#}
+{% macro create_tag_button(q) %}
+  <button
+    type="button"
+    class="badge badge-lg cursor-pointer transition-colors badge-primary"
+    data-name="{{ q }}"
+    hx-post="{{ url_for('tags:create') }}"
+    hx-vals='{{ {"name": q} | tojson }}'
+    hx-swap="none"
+    hx-on::before-on-load="event.preventDefault()"
+    @click="$store.articleTags.toggle($el.dataset.name)"
+  >
+    <span class="icon-[lucide--plus] text-sm"></span>
+    {{ q }}
+  </button>
+{% endmacro %}
+
+<dialog
+  x-data
+  x-init="$el.showModal()"
+  @close="$el.remove()"
+  class="modal"
+>
+  <div class="modal-box p-0 max-w-3xl flex flex-col" style="max-height: 70vh !important">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-base-300 shrink-0">
+      <h3 class="text-lg font-bold">选择标签</h3>
+      <button type="button" @click="$el.closest('dialog').close()" class="btn btn-sm btn-circle btn-ghost">
+        <span class="icon-[lucide--x] text-lg"></span>
+      </button>
+    </div>
+
+    <div class="px-6 py-4 border-b border-base-300 shrink-0">
+      <div class="relative">
+        <input
+          type="search"
+          name="q"
+          placeholder="搜索标签，未找到可点击创建按钮..."
+          class="input w-full pr-10"
+          hx-get="{{ url_for('articles:tag_dialog') }}"
+          hx-target="#tag-search-results"
+          hx-swap="innerHTML"
+          hx-select=".tag-result-item"
+          hx-trigger="keyup changed delay:300ms, search"
+          hx-push-url="false"
+          hx-indicator="#tag-search-loading"
+        >
+        <span
+          id="tag-search-loading"
+          class="htmx-indicator loading loading-spinner loading-sm absolute right-3 top-1/2 -translate-y-1/2"
+        ></span>
+      </div>
+    </div>
+
+    <div id="tag-search-results" class="flex-1 min-h-0 overflow-y-auto sidebar-scroll p-4">
+      {% if tags %}
+        <div class="tag-result-item flex flex-wrap gap-2">
+          {% for tag in tags %}
+            <button
+              type="button"
+              class="badge badge-lg cursor-pointer transition-colors"
+              data-name="{{ tag.name }}"
+              :class="$store.articleTags.has($el.dataset.name) ? 'badge-neutral' : 'badge-outline'"
+              @click="$store.articleTags.toggle($el.dataset.name)"
+            >
+              {{ tag.name }}
+            </button>
+          {% endfor %}
+
+          {# 搜索结果中无完全匹配 q 时，额外显示创建按钮 #}
+          {% if q and q not in (tags | map(attribute='name') | list) %}
+            {{ create_tag_button(q) }}
+          {% endif %}
+        </div>
+      {% elif q %}
+        <div class="tag-result-item flex flex-col items-center gap-3 py-12">
+          <p class="text-base-content/50">未找到匹配的标签</p>
+          {{ create_tag_button(q) }}
+        </div>
+      {% else %}
+        <div class="tag-result-item text-center py-12 text-base-content/50">
+          输入关键词搜索，未找到可点击创建按钮
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center justify-between px-6 py-4 border-t border-base-300 shrink-0">
+      <span class="text-sm text-base-content/60">
+        已选 <span x-text="$store.articleTags.items.length"></span> 个
+      </span>
+      <button type="button" class="btn btn-neutral btn-sm" @click="$el.closest('dialog').close()">
+        确定
+      </button>
+    </div>
+  </div>
+</dialog>

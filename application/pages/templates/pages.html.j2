@@ -1,0 +1,31 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/table.html.j2' import render_table_page with context %}
+
+  {# 单页支持「查看前台」操作 #}
+  {% macro custom_actions(row) %}
+    <a
+      class="btn btn-sm btn-dash btn-info"
+      href="{{ row.path }}"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      查看
+    </a>
+  {% endmacro %}
+
+  {{
+    render_table_page(
+        name="pages",
+        label="单页",
+        pagination=pagination,
+        titles=[
+            ("title", "标题"),
+            ("path", "访问路径"),
+            ("is_active", "状态")
+        ],
+        custom_actions=custom_actions
+    )
+  }}
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  <div class="flex flex-col gap-3">
+    <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <h2 class="text-xl font-semibold ps-2">仪表盘</h2>
+      <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+        <a
+          class="btn btn-neutral"
+          href="{{ url_for('dashboard:index') }}"
+        >
+          <span class="icon-[lucide--refresh-cw] text-lg"></span>
+          刷新数据
+        </a>
+      </div>
+    </div>
+
+    <div id="dashboard-content" class="flex flex-col gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="col-span-1 flex flex-col gap-5">
+          <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body p-5">
+              <h3 class="card-title text-base mb-2">快捷操作</h3>
+              <div class="grid grid-cols-2 gap-2">
+                {% if request.user.has_permission("articles:create") %}
+                <a href="{{ url_for('articles:new') }}" class="btn btn-soft btn-sm">添加文章</a>
+                {% endif %}
+                {% if request.user.has_permission("categories:view") %}
+                <a href="{{ url_for('categories:index') }}" class="btn btn-soft btn-sm">栏目管理</a>
+                {% endif %}
+                {% if request.user.has_permission("specials:view") %}
+                <a href="{{ url_for('specials:index') }}" class="btn btn-soft btn-sm">专题管理</a>
+                {% endif %}
+                {% if request.user.has_permission("pages:view") %}
+                <a href="{{ url_for('pages:index') }}" class="btn btn-soft btn-sm">单页管理</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body p-5">
+              <h3 class="card-title text-base mb-4 flex items-center gap-2">
+                <span class="icon-[lucide--monitor] text-lg text-base-content/70"></span>
+                系统环境
+              </h3>
+
+              <ul class="flex flex-col gap-3 text-sm">
+                <li class="flex items-center justify-between pb-2 border-b border-base-200/50">
+                  <span class="text-base-content/60 flex items-center gap-2">
+                    <span class="icon-[lucide--server] text-lg"></span>
+                    操作系统
+                  </span>
+                  <span class="font-medium text-base-content bg-base-200 px-2 py-0.5 rounded text-xs font-mono">{{
+                    sys.os
+                  }}</span>
+                </li>
+
+                <li class="flex items-center justify-between pb-2 border-b border-base-200/50">
+                  <span class="text-base-content/60 flex items-center gap-2">
+                    <span class="icon-[lucide--database] text-lg"></span>
+                    数据库
+                  </span>
+                  <span class="font-medium text-base-content bg-base-200 px-2 py-0.5 rounded text-xs font-mono">{{
+                    sys.database
+                  }}</span>
+                </li>
+
+                <li class="flex items-center justify-between pb-2 border-b border-base-200/50">
+                  <span class="text-base-content/60 flex items-center gap-2">
+                    <span class="icon-[lucide--terminal] text-lg"></span>
+                    Python
+                  </span>
+                  <span class="font-medium text-base-content bg-base-200 px-2 py-0.5 rounded text-xs font-mono">{{
+                    sys.python
+                  }}</span>
+                </li>
+              </ul>
+
+              <div class="flex flex-col gap-3 mt-2">
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-base-content/60 flex items-center gap-2">
+                      <span class="icon-[lucide--memory-stick] text-lg"></span>
+                      内存
+                    </span>
+                    <span class="font-mono text-xs">{{ sys.mem_used }} / {{ sys.mem_total }} ({{
+                        sys.mem_percent
+                      }}%)</span>
+                  </div>
+                  <progress class="progress progress-primary w-full" value="{{ sys.mem_percent }}" max="100"></progress>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-base-content/60 flex items-center gap-2">
+                      <span class="icon-[lucide--hard-drive] text-lg"></span>
+                      磁盘
+                    </span>
+                    <span class="font-mono text-xs">{{ sys.disk_free }} / {{ sys.disk_total }} ({{
+                        sys.disk_percent
+                      }}%)</span>
+                  </div>
+                  <progress class="progress progress-primary w-full" value="{{ sys.disk_percent }}" max="100">
+                  </progress>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-1 lg:col-span-2">
+          <div class="card bg-base-100 shadow border border-base-200 h-full">
+            <div class="card-body p-0">
+              <div class="flex items-center justify-between p-5 pb-0">
+                <h3 class="card-title text-base">最近发布</h3>
+                {% if request.user.has_permission("articles:view") %}
+                <a href="{{ url_for('articles:index') }}" class="btn btn-soft btn-sm">查看全部</a>
+                {% endif %}
+              </div>
+              <div class="overflow-x-auto mt-2 px-5">
+                <table class="table table-zebra table-md w-full">
+                  <thead>
+                    <tr>
+                      <th class="w-full text-base-content/80">标题</th>
+                      <th class="text-right whitespace-nowrap text-base-content/80">发布时间</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for article in recent_articles | default([]) %}
+                      <tr class="hover transition-colors">
+                        <td class="max-w-50 sm:max-w-xs lg:max-w-md truncate">
+                          {% if request.user.has_permission("articles:update") %}
+                          <a
+                            href="{{ url_for('articles:edit', item_id=article.id) }}"
+                            class="font-medium hover:text-primary transition-colors"
+                            title="{{ article.title }}"
+                          >
+                            {{ article.title }}
+                          </a>
+                          {% else %}
+                          <span class="font-medium" title="{{ article.title }}">{{ article.title }}</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-sm text-base-content/50 text-right whitespace-nowrap font-mono">
+                          {{ article.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        </td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="2" class="text-center py-12 text-base-content/40">
+                          <div class="flex flex-col items-center justify-center gap-2">
+                            <span class="icon-[lucide--file-text] text-3xl opacity-50"></span>
+                            <span>暂无数据</span>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

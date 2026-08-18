@@ -1,0 +1,39 @@
+{% macro render_tags(field) %}
+  {# 标签: Alpine store 驱动, dialog 与表单共享 $store.articleTags #}
+  <div
+    class="flex items-center gap-3"
+    x-data
+    x-init="$store.articleTags.items = JSON.parse($el.dataset.tags)"
+    data-tags="{{ (field.data or []) | tojson | forceescape }}"
+  >
+    <span class="text-sm w-16 shrink-0">标签</span>
+    <div class="input h-auto min-h-10 flex-wrap items-center gap-1.5 py-1.5 flex-1">
+      <template x-for="tag in $store.articleTags.items" :key="tag">
+        <span class="badge badge-sm badge-neutral badge-dash gap-1">
+          <span x-text="tag"></span>
+          <button
+            type="button"
+            class="opacity-50 hover:opacity-100"
+            @click="$store.articleTags.remove(tag)"
+          >
+            ✕
+          </button>
+        </span>
+      </template>
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm text-base-content/50 hover:text-base-content cursor-pointer whitespace-nowrap"
+        hx-get="{{ url_for('articles:tag_dialog') }}"
+        hx-target="#dialog-container"
+        hx-select="dialog"
+        hx-push-url="false"
+      >
+        <span class="icon-[lucide--plus] text-xs"></span>
+        添加
+      </button>
+    </div>
+  </div>
+  <template x-for="tag in $store.articleTags.items" :key="tag">
+    <input type="hidden" name="tags" :value="tag">
+  </template>
+{% endmacro %}

@@ -1,0 +1,114 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from "macros/base/dialog.html.j2" import render_dialog with context %}
+  {% from "macros/base/form.html.j2" import render_field with context %}
+
+  {% macro url_list(title, urls) %}
+    {%- if urls %}
+      <details class="text-sm opacity-80">
+        <summary class="cursor-pointer">{{ title }}（{{ urls|length }}）</summary>
+        <ul class="ps-4 list-disc mt-1">
+          {%- for u in urls %}<li class="break-all">{{ u }}</li>{%- endfor %}
+        </ul>
+      </details>
+    {%- endif %}
+  {% endmacro %}
+
+  {% macro push_result(result) %}
+    {%- if result %}
+      {% if result.mode == "preview" %}
+        <div role="alert" class="alert alert-warning">
+          <span class="icon-[lucide--triangle-alert] text-xl shrink-0"></span>
+          <div class="flex flex-col gap-0.5 flex-1">
+            <span class="font-medium">{{ result.message }}</span>
+            {%- if result.details %}
+              <ul class="text-sm opacity-80 ps-4 list-disc">
+                {%- for d in result.details %}<li>{{ d }}</li>{%- endfor %}
+              </ul>
+            {%- endif %}
+            {{ url_list("重复的 URL", result.dupes) }}
+            {{ url_list("未匹配站点的 URL", result.excluded) }}
+          </div>
+        </div>
+      {% else %}
+        <div role="alert" class="alert {{ 'alert-success' if result.type == 'success' else 'alert-error' }}">
+          <span
+            class="icon-[lucide--{{ 'circle-check' if result.type == 'success' else 'circle-x' }}] text-xl shrink-0"
+          ></span>
+          <div class="flex flex-col gap-0.5 flex-1">
+            <span class="font-medium">{{ result.message }}</span>
+            {%- if result.details %}
+              <ul class="text-sm opacity-80 ps-4 list-disc">
+                {%- for d in result.details %}<li>{{ d }}</li>{%- endfor %}
+              </ul>
+            {%- endif %}
+            {{ url_list("已跳过的重复 URL", result.skipped_dupes) }}
+            {{ url_list("未匹配站点的 URL", result.excluded) }}
+            {{ url_list("非本站被拒的 URL", result.not_same_site) }}
+            {{ url_list("不合法被拒的 URL", result.not_valid) }}
+          </div>
+          <a href="{{ url_for('seo:index') }}" hx-boost="false" class="btn btn-ghost btn-xs whitespace-nowrap">
+            查看推送记录
+          </a>
+        </div>
+      {% endif %}
+    {%- endif %}
+  {% endmacro %}
+
+  {%- if request.query_params.dialog -%}
+    {% call render_dialog(title="手动推送链接", extra_class="max-w-2xl") %}
+      <form
+        id="dialog-form"
+        hx-post="{{ url_for('seo:push') ~ '?dialog=true' }}"
+        hx-target="this"
+        hx-swap="outerHTML"
+        hx-select="#dialog-form"
+        hx-disabled-elt="[type=submit]"
+        class="flex flex-col flex-1 overflow-hidden"
+      >
+        <div class="flex flex-col gap-4 p-6 overflow-y-auto">
+          {{ push_result(result) }}
+          {{ render_field(form.urls) }}
+          {% if result and result.mode == "preview" %}
+            {{ render_field(form.action) }}
+          {% endif %}
+        </div>
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-base-300 shrink-0">
+          <button type="button" @click="$el.closest('dialog').close()" class="btn">
+            取消
+          </button>
+          {{ form.submit(class="btn btn-neutral") }}
+        </div>
+      </form>
+    {% endcall %}
+  {%- else -%}
+    <div class="flex flex-col gap-3">
+      <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <h2 class="text-xl font-semibold ps-2">手动推送链接</h2>
+        <a class="btn" href="{{ url_for('seo:index') }}">
+          <span class="icon-[lucide--arrow-left] text-lg"></span>
+          返回推送
+        </a>
+      </div>
+
+      <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body">
+          {{ push_result(result) }}
+          <form
+            action="{{ url_for('seo:push') }}"
+            method="post"
+            class="flex flex-col gap-3"
+            hx-disabled-elt="[type=submit]"
+          >
+            {{ render_field(form.urls) }}
+            {% if result and result.mode == "preview" %}
+              {{ render_field(form.action) }}
+            {% endif %}
+            <button type="submit" class="btn btn-neutral">确认推送</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  {%- endif -%}
+{% endblock %}

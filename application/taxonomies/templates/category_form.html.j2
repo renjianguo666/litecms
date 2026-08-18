@@ -1,0 +1,71 @@
+{% extends "base.html.j2" %}
+
+{% block workspace %}
+  {% from 'macros/form.html.j2' import render_form_page with context %}
+  {% from 'macros/base/form.html.j2' import render_field,render_fields_row %}
+  {% from 'category_form_radio_tree.html.j2' import render_category_radio_tree %}
+
+  {% set create_url = 'categories:create' %}
+  {% set update_url = 'categories:update' %}
+  {%
+    set action_url = url_for(update_url, item_id=request.path_params.item_id) if request.path_params.item_id else url_for(create_url)
+  %}
+
+  {% call render_form_page(form, "categories", "栏目") %}
+    <form action="{{ action_url }}" method="post" hx-disabled-elt="[type=submit]">
+      <input type="hidden" name="url" value="{{ request.query_params.url or url_for('categories:index') | e }}">
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-4 xl:col-span-3">
+          <div class="card bg-base-100 border border-base-300 shadow-sm sticky top-0 rounded-box">
+            <div class="px-4 py-3 border-b border-base-300">
+              <span class="text-sm font-medium">上级栏目</span>
+            </div>
+            <div class="p-2 overflow-y-auto sidebar-scroll" style="max-height: calc(100vh - 200px)">
+              <div class="flex items-center px-3 py-1 w-full rounded-md transition-colors hover:bg-base-200 has-checked:bg-base-300 has-checked:font-medium">
+                <label for="radio-root" class="flex items-center flex-1 cursor-pointer py-1">
+                  <span class="flex-1 text-sm select-none">无（作为一级栏目）</span>
+                  <input
+                    id="radio-root"
+                    type="radio"
+                    name="parent_id"
+                    value=""
+                    class="radio radio-sm"
+                    {%- if not category or not category.parent_id %}checked{%- endif -%}
+                  >
+                </label>
+              </div>
+              <hr class="my-2 border-base-200">
+              {{ render_category_radio_tree(category_tree, category) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-8 xl:col-span-9">
+          <div class="card bg-base-100 border border-base-300 shadow-sm rounded-box">
+            <div class="card-body p-4 md:p-6 flex flex-col gap-6">
+              <fieldset class="fieldset rounded-box bg-base-300 p-3">
+                <legend class="fieldset-legend">基本信息</legend>
+                {{ render_fields_row([form.name, form.title],row_class="grid grid-cols-1 md:grid-cols-2 gap-5") }}
+                {{ render_field(form.description) }}
+                {{ render_field(form.cover_url) }}
+              </fieldset>
+              <fieldset class="fieldset rounded-box bg-base-300 p-3">
+                <legend class="fieldset-legend">扩展设置</legend>
+                {{
+                  render_fields_row([form.path, form.content_path],row_class="grid grid-cols-1 md:grid-cols-2 gap-5")
+                }}
+                {{ render_fields_row([form.template,form.domain],row_class="grid grid-cols-1 md:grid-cols-2 gap-5") }}
+                {{
+                  render_fields_row([form.page_size, form.priority],row_class="grid grid-cols-1 md:grid-cols-2 gap-5")
+                }}
+              </fieldset>
+
+              {{ form.submit(class="btn btn-neutral") }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  {% endcall %}
+{% endblock %}

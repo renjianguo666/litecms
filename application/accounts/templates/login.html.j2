@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - LiteCMS</title>
+    <link href="{{ url_for('static', file_path='css/app.css') }}" rel="stylesheet" type="text/css">
+    <style>
+      /* 装饰性背景纹理，纯视觉效果 */
+      .bg-texture-mesh {
+        background-image:
+          linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+        background-size: 30px 30px;
+      }
+    </style>
+  </head>
+
+  <body class="min-h-svh bg-base-200 bg-texture-mesh flex items-center justify-center p-4 font-sans text-base-content antialiased">
+    <div class="w-full max-w-sm bg-base-100 rounded-xl shadow-2xl border border-base-300 overflow-hidden">
+      <div class="h-1.5 w-full bg-neutral"></div>
+
+      <div class="p-8 sm:p-10">
+        <div class="mb-8 text-left">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="size-8 bg-neutral rounded flex items-center justify-center shadow-sm">
+              <span class="icon-[lucide--box] text-lg text-neutral-content"></span>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight">LiteCMS</h1>
+          </div>
+          <p class="text-sm text-base-content/50">欢迎回来，请登录您的管理员账号</p>
+        </div>
+
+        {% if form.form_errors %}
+          <div class="alert alert-error rounded-md text-sm py-3 mb-6 bg-error/10 border border-error/20 text-error">
+            <span class="icon-[lucide--triangle-alert] text-lg shrink-0"></span>
+            <div class="flex flex-col gap-1">
+              {% for error in form.form_errors %}
+                <span>{{ error }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        <form
+          action="{{ url_for('auth:login') }}"
+          method="post"
+          class="flex flex-col gap-5"
+        >
+          {{ csrf_input | safe }}
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-base-content/80" for="{{form.username.name}}">
+              {{ form.username.label.text }}
+            </label>
+            {{
+              form.username(class="input input-bordered w-full h-10 text-sm focus:border-neutral focus:outline-neutral bg-transparent")
+            }}
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-base-content/80" for="{{form.password.name}}">
+                {{ form.password.label.text }}
+              </label>
+            </div>
+            {{
+              form.password(class="input input-bordered w-full h-10 text-sm focus:border-neutral focus:outline-neutral bg-transparent")
+            }}
+          </div>
+
+          <div class="pt-2">
+            {{ form.submit(class="btn btn-neutral w-full h-10 min-h-0 text-sm font-medium shadow-sm") }}
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-base-200/30 p-4 border-t border-base-200 text-center text-xs text-base-content/40 font-mono">
+        &copy; 2026 LiteCMS. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
