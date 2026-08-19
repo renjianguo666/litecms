@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 from uuid import UUID
 
@@ -55,14 +55,14 @@ class Category(UUIDv7AuditBase):
         index=True,
     )
 
-    parent: Mapped["Category"] = relationship(
+    parent: Mapped[Category] = relationship(
         remote_side=lambda: Category.id,  # 明确指定远程 ID
         back_populates="children",
         lazy="raise",
         uselist=False,
     )
 
-    children: Mapped[list["Category"]] = relationship(
+    children: Mapped[list[Category]] = relationship(
         back_populates="parent", lazy="raise"
     )
 
@@ -88,7 +88,7 @@ class Category(UUIDv7AuditBase):
 
         return urljoin(get_settings("site_url", ""), self.url)
 
-    def to_dict(self, exclude: Optional[set[str]] = None) -> dict[str, Any]:
+    def to_dict(self, exclude: set[str] | None = None) -> dict[str, Any]:
         return {
             **super().to_dict(exclude=exclude),
             "url": self.url,

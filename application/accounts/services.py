@@ -9,6 +9,7 @@ from advanced_alchemy.service import (
     schema_dump,
 )
 from advanced_alchemy.service import typing as service_typing
+from sqlalchemy.orm import selectinload
 
 from application.contents.models import Content
 from application.contents.services import ContentRepository
@@ -52,19 +53,22 @@ class RoleService(PaginationServiceMixin, SQLAlchemyAsyncRepositoryService[Role]
             )
         return data
 
-    async def to_model_on_update(
-        self, data: service_typing.ModelDictT[Role]
-    ) -> service_typing.ModelDictT[Role]:
-        if not isinstance(data, dict):
-            data = schema_dump(data)
-
-        permission_ids = data.get("permissions", None)
+    async def update(
+        self, data: service_typing.ModelDictT[Role], item_id: Any | None = None, **kwargs: Any
+    ) -> Role:
+        """重写 update: permissions 是 M2M 关系, 同上用原生 ORM 同步 (避免 SAWarning)。"""
+        permission_ids = None
+        if isinstance(data, dict) and "permissions" in data:
+            permission_ids = data.pop("permissions")
+        updated = await super().update(data, item_id, **kwargs)
         if permission_ids is not None:
-            perm_repo = PermissionRepository(session=self.repository.session)
-            data["permissions"] = await perm_repo.get_many(
-                CollectionFilter(field_name="id", values=permission_ids)
-            )
-        return data
+            permissions = await PermissionRepository(
+                session=self.repository.session
+            ).get_many(CollectionFilter(field_name="id", values=permission_ids))
+            role = await self.repository.get(item_id, load=[selectinload(Role.permissions)])
+            role.permissions = list(permissions)
+            await self.repository.session.flush()
+        return updated
 
 
 class UserService(PaginationServiceMixin, SQLAlchemyAsyncRepositoryService[User]):
@@ -94,16 +98,21 @@ class UserService(PaginationServiceMixin, SQLAlchemyAsyncRepositoryService[User]
             )
         return data
 
-    async def to_model_on_update(
-        self, data: service_typing.ModelDictT[User]
-    ) -> service_typing.ModelDictT[User]:
-        if not isinstance(data, dict):
-            data = schema_dump(data)
-
-        role_ids = data.get("roles", None)
+    async def update(
+        self, data: service_typing.ModelDictT[User], item_id: Any | None = None, **kwargs: Any
+    ) -> User:
+        """重写 update: roles 是 M2M 关系, advanced_alchemy 的 service.update 对其会触发
+        SAWarning (官方 fullstack 同样触发, 见 issue)。抽出 roles 后用原生 ORM 同步,
+        普通字段走 super().update。"""
+        role_ids = None
+        if isinstance(data, dict) and "roles" in data:
+            role_ids = data.pop("roles")
+        updated = await super().update(data, item_id, **kwargs)
         if role_ids is not None:
-            role_repo = RoleRepository(session=self.repository.session)
-            data["roles"] = await role_repo.get_many(
+            roles = await RoleRepository(session=self.repository.session).get_many(
                 CollectionFilter(field_name="id", values=role_ids)
             )
-        return data
+            user = await self.repository.get(item_id, load=[selectinload(User.roles)])
+            user.roles = list(roles)
+            await self.repository.session.flush()
+        return updated

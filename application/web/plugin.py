@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 import importlib.util as importlib_util
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, cast
+from typing import cast
 
 from litestar import Request, Response
 
@@ -31,7 +32,9 @@ class PluginRegistry:
         handler_file = plugin_dir / name / "handlers.py"
         if not handler_file.exists():
             return
-        spec = importlib_util.spec_from_file_location(f"plugins.{name}.handlers", handler_file)
+        spec = importlib_util.spec_from_file_location(
+            f"plugins.{name}.handlers", handler_file
+        )
         if not spec or not spec.loader:
             return
         module = importlib_util.module_from_spec(spec)

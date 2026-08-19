@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from typing import Any, cast
 
@@ -119,7 +119,7 @@ class SecurityPlugin(InitPlugin):
             app_config.after_response = combined
 
     async def _cleanup_expired_sessions(self, request: Request) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # 不传 default: key 不存在时返回 None, 用 None 区分"从未清理过"。
         # 若 default 填 now, 则 now-now==0 条件恒 False, key 永不写入 ->
         # 永远走 default -> 死循环, delete_expired() 一次都不执行。

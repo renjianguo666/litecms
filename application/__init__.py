@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Type
+from typing import Any
 
 from litestar import Litestar
 from litestar.datastructures import FormMultiDict
@@ -23,7 +23,7 @@ def create_app() -> Litestar:
             plugins.sqlalchemy,
             plugins.security,
             plugins.cli,
-            plugins.debug_toolbar,
+            # plugins.debug_toolbar,
         ],
         stores=cfg.stores,
         response_cache_config=cfg.response_cache_config,
@@ -58,11 +58,11 @@ def create_app() -> Litestar:
 # =============================================================================
 
 
-def is_form_multidict(target_type: Type) -> bool:
+def is_form_multidict(target_type: type) -> bool:
     return target_type is FormMultiDict
 
 
-def to_form_multidict(target_type: Type, value: Any) -> FormMultiDict:
+def to_form_multidict(target_type: type, value: Any) -> FormMultiDict:
     return (
         value
         if isinstance(value, FormMultiDict)

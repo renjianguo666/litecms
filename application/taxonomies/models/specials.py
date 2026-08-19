@@ -34,7 +34,7 @@ class Special(UUIDv7AuditBase):
     priority: Mapped[int] = mapped_column(default=0, comment="排序优先级")
 
     # === 关系 ===
-    contents: Mapped[list["Content"]] = relationship(
+    contents: Mapped[list[Content]] = relationship(
         secondary="taxonomies_specials_contents",
         passive_deletes=True,
         back_populates="specials",
@@ -69,9 +69,9 @@ class SpecialContent(AdvancedDeclarativeBase):
     priority: Mapped[int] = mapped_column(default=0, comment="优先级(值越大越靠前)")
 
     # === 关系 ===
-    content: Mapped["Content"] = relationship(
+    content: Mapped[Content] = relationship(
         lazy="raise", overlaps="contents,specials"
     )
-    special: Mapped["Special"] = relationship(
+    special: Mapped[Special] = relationship(
         lazy="raise", overlaps="contents,specials"
     )

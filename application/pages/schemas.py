@@ -20,4 +20,4 @@ class PageSchema(Schema):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        setattr(self, "is_active", "启用" if self.is_active else "禁用")
+        self.is_active = "启用" if self.is_active else "禁用"

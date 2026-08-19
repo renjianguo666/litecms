@@ -6,6 +6,6 @@ from .tags import TagController
 __all__ = [
     "CategoryController",
     "FeatureController",
-    "TagController",
     "SpecialController",
+    "TagController",
 ]

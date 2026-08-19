@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 from math import log, sqrt
 from random import randint
-from typing import TYPE_CHECKING, Any, Sequence
-from uuid import UUID, uuid7
+from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 import rjieba
 from advanced_alchemy.filters import CollectionFilter
@@ -13,6 +14,7 @@ from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService, schema_du
 from advanced_alchemy.service.typing import ModelDictT
 from litestar.concurrency import sync_to_thread
 from selectolax.parser import HTMLParser
+from uuid_utils import uuid7
 
 from application.mixins import PaginationServiceMixin
 from application.permalink import build_permalink

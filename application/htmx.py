@@ -26,7 +26,7 @@ HTMX 响应层：本站所有 HTMX 交互响应的统一出口。
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, urlparse
 
 from jinja2_fragments.litestar import HTMXBlockTemplate as _HTMXBlockTemplate
@@ -52,7 +52,7 @@ from litestar_htmx.types import (
 if TYPE_CHECKING:
     from litestar.app import Litestar
 
-__all__ = ["HTMXMixin", "HTMXRequest", "HTMXBlockTemplate", "HXLocation"]
+__all__ = ["HTMXBlockTemplate", "HTMXMixin", "HTMXRequest", "HXLocation"]
 
 
 DEFAULT_HX_TARGET = "#workspace"
@@ -132,7 +132,7 @@ class HTMXMixin:
     def htmx_location(
         self,
         redirect_to: str,
-        target: Optional[str] = DEFAULT_HX_TARGET,
+        target: str | None = DEFAULT_HX_TARGET,
         source: str | None = None,
         event: str | None = None,
         select: str | None = None,
@@ -164,15 +164,15 @@ class HTMXMixin:
     def htmx_render(
         self,
         template_name: str,
-        context: Optional[Dict[str, Any]] = None,
-        block_name: Optional[str] = DEFAULT_HX_TARGET.replace("#", ""),
-        block_names: Optional[list[str]] = None,
-        push_url: Optional[PushUrlType] = None,
-        re_swap: Optional[ReSwapMethod] = None,
-        re_target: Optional[str] = None,
-        trigger_event: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
-        after: Optional[EventAfterType] = None,
+        context: dict[str, Any] | None = None,
+        block_name: str | None = DEFAULT_HX_TARGET.replace("#", ""),
+        block_names: list[str] | None = None,
+        push_url: PushUrlType | None = None,
+        re_swap: ReSwapMethod | None = None,
+        re_target: str | None = None,
+        trigger_event: str | None = None,
+        params: dict[str, Any] | None = None,
+        after: EventAfterType | None = None,
         **kwargs: Any,
     ) -> HTMXTemplate:
         """渲染模板: HX 请求只渲染目标块, 非 HX 请求渲染整页。

@@ -39,10 +39,7 @@ def optimize_image(content: bytes, quality: int = 82, max_side: int = 3000) -> b
         # 静态图: 先按尺寸上限缩小, 再全量解码转换
         if max(img.size) > max_side:
             img.thumbnail((max_side, max_side))
-        if img.mode in ("RGBA", "P"):
-            img = img.convert("RGBA")
-        else:
-            img = img.convert("RGB")
+        img = img.convert("RGBA") if img.mode in ("RGBA", "P") else img.convert("RGB")
         output = BytesIO()
         img.save(output, format="WEBP", quality=quality, optimize=True)
         return output.getvalue()

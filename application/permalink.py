@@ -7,6 +7,8 @@ from os.path import splitext
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from application.config import cfg
+
 if TYPE_CHECKING:
     from application.contents.models import Content
     from application.taxonomies.models import Category
@@ -33,7 +35,7 @@ def uuid_to_base31(uuid_val: UUID) -> str:
 
 def uuid_to_num(uuid_val: UUID) -> str:
     """UUID → 24 位数字字符串。"""
-    return str(uuid_val.int % (10 ** _GEN_LENGTH)).zfill(_GEN_LENGTH)
+    return str(uuid_val.int % (10**_GEN_LENGTH)).zfill(_GEN_LENGTH)
 
 
 def build_permalink(rule: str, model: Category | Content) -> str:
@@ -57,7 +59,7 @@ def build_permalink(rule: str, model: Category | Content) -> str:
     dt: datetime = (
         getattr(model, "published_at", None)
         or getattr(model, "created_at", None)
-        or datetime.now()
+        or datetime.now(cfg.tzinfo)
     )
 
     ctx: dict[str, str] = {

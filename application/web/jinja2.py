@@ -63,7 +63,7 @@ def _session_by_request(request: Any) -> AsyncSession:
 @pass_context
 async def category_select(
     ctx,
-    id: UUID | list[UUID] | None = None,
+    item_id: UUID | list[UUID] | None = None,
     parent_id: UUID | None = None,
     order_by: str | None = None,
     order_dir: Literal["asc", "desc"] = "asc",
@@ -73,7 +73,7 @@ async def category_select(
     标签只返回一维列表 (一层); 要多层在模板里嵌套循环, 用上一层的 id
     作 parent_id 再调一次。每次都是缓存内存过滤, 不查库, 无 N+1。
 
-    id: 按 id 取栏目本身 (单个或列表); 传 id 时忽略 parent_id;
+    item_id: 按 id 取栏目本身 (单个或列表); 传 item_id 时忽略 parent_id;
     parent_id: 取该栏目的直接子栏目; None (默认) = 顶级栏目;
     order_by: 排序字段 (Schema 属性名, 如 "priority" / "id");
         None (默认) = 维持缓存 trail 序 (树前序);
@@ -90,11 +90,11 @@ async def category_select(
     session = _session_by_request(ctx["request"])
     cats = await get_categories_cached(session)
 
-    if id is not None:
-        if isinstance(id, UUID):
-            result = [c for c in cats if c.id == id]
+    if item_id is not None:
+        if isinstance(item_id, UUID):
+            result = [c for c in cats if c.id == item_id]
         else:
-            id_set = set(id)
+            id_set = set(item_id)
             result = [c for c in cats if c.id in id_set]
     else:
         result = [c for c in cats if c.parent_id == parent_id]

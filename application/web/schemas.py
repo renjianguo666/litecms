@@ -46,7 +46,7 @@ class CategoryLiteSchema(Schema):
 
 
 class CategorySchema(CategoryLiteSchema):
-    children: list["CategorySchema"] = msgspec_field(default_factory=list)
+    children: list[CategorySchema] = msgspec_field(default_factory=list)
 
 
 class SpecialSchema(Schema):

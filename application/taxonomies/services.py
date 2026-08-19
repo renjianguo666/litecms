@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from contextlib import suppress
 from typing import Any, Generic
-from uuid import UUID, uuid7
+from uuid import UUID
 
 from advanced_alchemy.exceptions import RepositoryError
 from advanced_alchemy.filters import CollectionFilter
@@ -23,6 +24,7 @@ from pypinyin import Style, lazy_pinyin
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
+from uuid_utils import uuid7
 
 from application.checks import check_path_unique
 from application.contents.models import Content
@@ -229,10 +231,9 @@ class CategoryService(
 
             updated.content_path = normalize_path(updated.content_path)
         except Exception:
-            try:
+            # 连接断开等极端情况, 优先保留原始异常
+            with suppress(Exception):
                 await self.repository.session.rollback()
-            except Exception:
-                pass  # 连接断开等极端情况, 优先保留原始异常
             raise
         return updated
 
@@ -262,7 +263,7 @@ class CategoryService(
         return build_permalink(model_instance.path, model_instance)
 
 
-class ContentAssociationServiceMixin(PaginationServiceMixin, Generic[ModelT]):
+class ContentAssociationServiceMixin(PaginationServiceMixin, Generic[ModelT]):  # noqa: UP046 ModelT 是 advanced_alchemy 导入的 TypeVar, 不适合改 PEP695
     """
     为拥有 contents M2M 关系的 taxonomy 服务提供批量关联/移除能力。
     依赖子类 repository.model_type 上存在 contents 关系属性。
@@ -304,9 +305,7 @@ class ContentAssociationServiceMixin(PaginationServiceMixin, Generic[ModelT]):
             item.contents.remove(content)
 
 
-class TagService(
-    ContentAssociationServiceMixin, SQLAlchemyAsyncRepositoryService[Tag]
-):
+class TagService(ContentAssociationServiceMixin, SQLAlchemyAsyncRepositoryService[Tag]):
     repository_type = TagRepository
 
     async def to_model_on_create(self, data: ModelDictT[Tag]) -> ModelDictT[Tag]:

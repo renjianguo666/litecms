@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import MutableMapping, Type, Union
+from collections.abc import MutableMapping
 
 from advanced_alchemy.exceptions import DuplicateKeyError, NotFoundError
 from litestar import Request
@@ -62,7 +62,7 @@ def conflict_handler(request: Request, exc: Exception) -> Template:
     return Template(template_name="errors/409.html.j2", status_code=HTTP_409_CONFLICT)
 
 
-ExceptionConfig = MutableMapping[Union[int, Type[Exception]], ExceptionHandler]
+ExceptionConfig = MutableMapping[int | type[Exception], ExceptionHandler]
 
 exception_handler: ExceptionConfig = {
     PathConflictError: bad_request_handler,

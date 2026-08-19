@@ -25,7 +25,7 @@ class Tag(UUIDv7AuditBase):
     slug: Mapped[str] = mapped_column(String(100), unique=True)
 
     # (关键 M2M) "contents" 关系
-    contents: Mapped[list["Content"]] = relationship(
+    contents: Mapped[list[Content]] = relationship(
         secondary="taxonomies_tags_contents",
         passive_deletes=True,
         back_populates="tags",

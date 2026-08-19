@@ -22,13 +22,8 @@ class UserSchema(Schema):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        setattr(self, "is_active", "启用" if self.is_active else "禁用")
-        setattr(self, "is_superuser", "是" if self.is_superuser else "否")
-        setattr(
-            self,
-            "roles",
-            " | ".join([r.name for r in self.roles]) if self.roles else "",
-        )
+        self.is_active = "启用" if self.is_active else "禁用"
+        self.is_superuser = "是" if self.is_superuser else "否"
 
 
 class RoleSchema(Schema):
@@ -37,3 +32,6 @@ class RoleSchema(Schema):
     id: UUID
     name: str
     description: str | None
+
+    def __repr__(self) -> str:
+        return self.name

@@ -38,8 +38,9 @@ from .schemas import (
 class WebController(Controller):
     path = "/"
     include_in_schema = False
-    opt = {"exclude_from_auth": True}
     before_request = before_request_sitemap_handler
+
+    opt = {"exclude_from_auth": True}
 
     dependencies = {
         "category_service": create_service_provider(CategoryService),
@@ -116,9 +117,7 @@ class WebController(Controller):
         )
 
     @get("plugin/{plugin_name:str}", name="web:plugin", cache=True)
-    async def plugin_callback(
-        self, request: Request, plugin_name: params.FromPath[str]
-    ) -> Response | Template:
+    async def plugin_callback(self, request: Request, plugin_name: params.FromPath[str]) -> Response | Template:
         handler = plugin.get_handler(plugin_name)
         if handler is not None:
             return handler(request)
@@ -153,27 +152,20 @@ class WebController(Controller):
         permalink: params.FromQuery[str],
     ) -> str:
         result = await db_session.execute(
-            update(Content)
-            .where(Content.path == permalink)
-            .values(views=Content.views + 1)
-            .returning(Content.views)
+            update(Content).where(Content.path == permalink).values(views=Content.views + 1).returning(Content.views)
         )
         views = result.scalar_one_or_none()
         return f"document.write({views or 0});"
 
-    async def category_view(
-        self, path: str, request: Request, db_session: AsyncSession
-    ) -> Template | None:
+    async def category_view(self, path: str, request: Request, db_session: AsyncSession) -> Template | None:
         service = CategoryService(session=db_session)
-        category = await service.get_one_or_none(
-            path=path, load=selectinload(Category.children)
-        )
+        category = await service.get_one_or_none(path=path, load=selectinload(Category.children))
         if category is None:
             return None
 
         breadcrumbs = convert(
             await service.get_many(
-                Category.id.in_([id for id in category.trail.split(".")]),
+                Category.id.in_(category.trail.split(".")),
                 order_by=[("trail", False)],
             ),
             list[CategoryLiteSchema],
@@ -185,9 +177,7 @@ class WebController(Controller):
         filters = [Article.status == PublishStatus.PUBLISHED]
 
         if category.children:
-            query = await db_session.scalars(
-                select(Category.id).where(Category.trail.like(f"{category.trail}.%"))
-            )
+            query = await db_session.scalars(select(Category.id).where(Category.trail.like(f"{category.trail}.%")))
             filters.append(Article.category_id.in_(query))
         else:
             filters.append(Article.category_id == category.id)
@@ -204,9 +194,7 @@ class WebController(Controller):
             ],
         )
 
-        template = [
-            "web_category_index.html" if category.children else "web_category.html"
-        ]
+        template = ["web_category_index.html" if category.children else "web_category.html"]
         if category.template:
             template.insert(
                 0,
@@ -224,9 +212,7 @@ class WebController(Controller):
             },
         )
 
-    async def page_view(
-        self, path: str, request: Request, db_session: AsyncSession
-    ) -> Template | None:
+    async def page_view(self, path: str, request: Request, db_session: AsyncSession) -> Template | None:
         page_service = PageService(session=db_session)
         page_obj = await page_service.get_one_or_none(path=path)
         if page_obj is None:
@@ -241,9 +227,7 @@ class WebController(Controller):
             context={"page": convert(page_obj, PageSchema, from_attributes=True)},
         )
 
-    async def article_view(
-        self, path: str, request: Request, db_session: AsyncSession
-    ) -> Template | None:
+    async def article_view(self, path: str, request: Request, db_session: AsyncSession) -> Template | None:
         article_service = ArticleService(session=db_session)
         article = await article_service.get_one_or_none(
             path=path,
@@ -259,7 +243,7 @@ class WebController(Controller):
             return None
 
         # 面包屑: 取栏目祖先链 (转 CategoryLiteSchema, 统一用 schema)
-        ancestor_ids = [id for id in article.category.trail.split(".") if id]
+        ancestor_ids = [part for part in article.category.trail.split(".") if part]
         breadcrumbs = (
             convert(
                 await CategoryService(session=db_session).get_many(

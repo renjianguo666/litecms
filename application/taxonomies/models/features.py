@@ -26,7 +26,7 @@ class Feature(UUIDv7AuditBase):
     is_active: Mapped[bool] = mapped_column(default=True, index=True)
 
     # M2M 关系: Feature <-> Content
-    contents: Mapped[list["Content"]] = relationship(
+    contents: Mapped[list[Content]] = relationship(
         secondary="taxonomies_features_contents",
         passive_deletes=True,
         back_populates="features",
@@ -55,9 +55,9 @@ class FeatureContent(AdvancedDeclarativeBase):
     priority: Mapped[int] = mapped_column(default=0, comment="优先级(值越大越靠前)")
 
     # === 关系 ===
-    content: Mapped["Content"] = relationship(
+    content: Mapped[Content] = relationship(
         lazy="raise", overlaps="contents,features"
     )
-    feature: Mapped["Feature"] = relationship(
+    feature: Mapped[Feature] = relationship(
         lazy="raise", overlaps="contents,features"
     )

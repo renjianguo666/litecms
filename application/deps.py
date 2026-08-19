@@ -12,10 +12,10 @@ from application.database import sqlalchemy_config
 
 @asynccontextmanager
 async def provide_services(
-    *providers: Callable[..., AsyncGenerator[Any, None]],
+    *providers: Callable[..., AsyncGenerator[Any]],
     session: AsyncSession | None = None,
     connection: ASGIConnection[Any, Any, Any, Any] | None = None,
-) -> AsyncGenerator[tuple[Any, ...], None]:
+) -> AsyncGenerator[tuple[Any, ...]]:
     """
     提供多个共享同一个数据库会话的服务。
     用于在 Litestar DI 上下文之外（如后台任务、CLI）获取服务。
@@ -29,9 +29,9 @@ async def provide_services(
 
     async def _collect_services(
         db_session: AsyncSession,
-    ) -> tuple[tuple[object, ...], list[AsyncGenerator[Any, None]]]:
+    ) -> tuple[tuple[object, ...], list[AsyncGenerator[Any]]]:
         services: list[object] = []
-        generators: list[AsyncGenerator[Any, None]] = []
+        generators: list[AsyncGenerator[Any]] = []
         try:
             for provider in providers:
                 generator = provider(db_session)
@@ -45,7 +45,7 @@ async def provide_services(
 
     async def _run(
         db_session: AsyncSession, *, commit: bool
-    ) -> AsyncGenerator[tuple[Any, ...], None]:
+    ) -> AsyncGenerator[tuple[Any, ...]]:
         services, generators = await _collect_services(db_session)
         try:
             yield services

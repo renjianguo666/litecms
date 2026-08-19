@@ -3,7 +3,7 @@ name = "litecms"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "aiohttp>=3.14.3",
     "alibabacloud-oss-v2>=1.3.2",
@@ -22,10 +22,11 @@ dependencies = [
     "nh3>=0.3.6",
     "granian>=2.8.1",
     "fastnanoid>=0.4.3",
+    "uuid-utils>=0.17.0",
 ]
 
 [[tool.uv.index]]
-url = "https://mirrors.aliyun.com/pypi/simple/"
+url = "https://mirror.nju.edu.cn/pypi/web/simple"
 default = true
 
 
@@ -36,3 +37,30 @@ indent-width = 2
 profile = "jinja"
 # 保持你自闭合标签的习惯，不强加斜杠
 html-void-self-closing = "never"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.3",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+    "SIM",# flake8-simplify
+    "A",  # flake8-builtins
+    "C4", # flake8-comprehensions
+    "PIE",# flake8-pie
+    "PT", # flake8-pytest-style
+]
+# RUF012(可变类属性需 ClassVar)与 Litestar/SQLAlchemy 基类类型标注
+# (实例变量)冲突:加 ClassVar 会触发 pyright reportIncompatibleVariableOverride。
+# 本项目这些类属性均为有意的框架配置, 忽略该规则。
+ignore = ["RUF012"]

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from math import ceil
-from typing import TYPE_CHECKING, Any, Generic, Iterator, List, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from advanced_alchemy.exceptions import ErrorMessages
 from advanced_alchemy.filters import LimitOffset, StatementFilter
@@ -26,7 +26,7 @@ else:
 T = TypeVar("T")
 
 
-class Pagination(Generic[T]):
+class Pagination[T]:
     def __init__(self, items: Sequence[T], total: int, page_size: int, page: int):
         self.items = items
         self.total = total
@@ -96,23 +96,23 @@ class Pagination(Generic[T]):
         yield from range(right_start, pages_end)
 
 
-class PaginationServiceMixin(_ServiceMixin, Generic[ModelT]):
+class PaginationServiceMixin[ModelT](_ServiceMixin):
     async def paginate(
         self,
-        *filters: Union[StatementFilter, ColumnElement[bool]],
+        *filters: StatementFilter | ColumnElement[bool],
         page: int = 1,
         page_size: int = 15,
         schema_type: type[Struct] | None = None,
-        statement: Optional[Select[tuple[ModelT]]] = None,
-        auto_expunge: Optional[bool] = None,
-        count_with_window_function: Optional[bool] = None,
-        order_by: Optional[Union[List[OrderingPair], OrderingPair]] = None,
-        error_messages: Optional[Union[ErrorMessages, EmptyType]] = Empty,
-        load: Optional[LoadSpec] = None,
-        execution_options: Optional[dict[str, Any]] = None,
-        uniquify: Optional[bool] = None,
+        statement: Select[tuple[ModelT]] | None = None,
+        auto_expunge: bool | None = None,
+        count_with_window_function: bool | None = None,
+        order_by: list[OrderingPair] | OrderingPair | None = None,
+        error_messages: ErrorMessages | EmptyType | None = Empty,
+        load: LoadSpec | None = None,
+        execution_options: dict[str, Any] | None = None,
+        uniquify: bool | None = None,
         use_cache: bool = True,
-        bind_group: Optional[str] = None,
+        bind_group: str | None = None,
         **kwargs: Any,
     ) -> Pagination[Any]:
         """分页查询，可选转为展示层 Schema。

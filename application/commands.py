@@ -103,6 +103,10 @@ class CommandPlugin(CLIPlugin):
             deploy_dir.mkdir(exist_ok=True)
 
             # 1. 生成 systemd service
+            exec_start = (
+                f"ExecStart={granian_exe} --interface asgi --factory --workers 1 "
+                f"--uds {sock_path} --uds-permissions 666 application:create_app"
+            )
             service_content = f"""\
 [Unit]
 Description={project_name.title()} Application
@@ -114,7 +118,7 @@ User={user}
 Group={group}
 WorkingDirectory={cfg.root_dir}
 Environment="PATH={venv_bin}:/usr/bin"
-ExecStart={granian_exe} --interface asgi --factory --workers 1 --uds {sock_path} --uds-permissions 666 application:create_app
+{exec_start}
 Restart=always
 RestartSec=5
 MemoryHigh=550M

@@ -92,7 +92,7 @@ class TemplateController(HTMXMixin, Controller):
                 try:
                     tpl = get_template(kind, target)
                     content = await sync_to_thread(tpl.read_text, encoding="utf-8")
-                except UnicodeDecodeError, OSError:
+                except (UnicodeDecodeError, OSError):
                     return self.htmx_error(
                         "模板文件读取失败",
                         redirect=f"{request.url_for('templates:index')}?kind={kind}",
@@ -183,8 +183,7 @@ class TemplateController(HTMXMixin, Controller):
             else:
                 await sync_to_thread(tpl.parent.mkdir, parents=True, exist_ok=True)
                 await sync_to_thread(tpl.touch)
-        except (PermissionError, FileNotFoundError, OSError) as e:
-            print("============", e)
+        except (PermissionError, FileNotFoundError, OSError):
             return self.htmx_error("创建模板失败", skip_redirect=True)
 
         return self.htmx_success("创建成功")
@@ -220,13 +219,15 @@ class TemplateController(HTMXMixin, Controller):
             else:
                 tpl = get_template(form.kind.data, form.name.data)
             await sync_to_thread(tpl.write_text, form.content.data, encoding="utf-8")
-        except PermissionError, FileNotFoundError, OSError:
+        except (PermissionError, FileNotFoundError, OSError):
             return self.htmx_error("模板保存失败", skip_redirect=True)
 
         return self.htmx_success("保存成功", skip_redirect=True)
 
     @post("disable", name="templates:disable", guards=[write_permission])
-    async def disable(self, request: Request, data: URLEncodedBody[FormMultiDict]) -> Response:
+    async def disable(
+        self, request: Request, data: URLEncodedBody[FormMultiDict]
+    ) -> Response:
         """禁用固定文件模板 (index/tags): 文件 → 文件.bak, 前台回退内置模板。"""
         kind, name = data.get("kind"), data.get("name")
         if kind not in FIXED_KINDS or name not in FIXED_KINDS[kind]:
@@ -245,7 +246,9 @@ class TemplateController(HTMXMixin, Controller):
         )
 
     @post("enable", name="templates:enable", guards=[write_permission])
-    async def enable(self, request: Request, data: URLEncodedBody[FormMultiDict]) -> Response:
+    async def enable(
+        self, request: Request, data: URLEncodedBody[FormMultiDict]
+    ) -> Response:
         """启用固定文件模板 (index/tags): 文件.bak → 文件, 前台恢复自定义模板。
 
         若原件已存在(禁用期间编辑保存过, 内容比 .bak 新): 新内容优先, 丢旧备份。
@@ -258,7 +261,9 @@ class TemplateController(HTMXMixin, Controller):
         if bak.exists():
             tpl = root / name
             if tpl.exists():
-                await sync_to_thread(bak.unlink)  # 禁用期间保存过新内容(原件重建): 不覆盖, 丢旧备份
+                await sync_to_thread(
+                    bak.unlink
+                )  # 禁用期间保存过新内容(原件重建): 不覆盖, 丢旧备份
             else:
                 await sync_to_thread(bak.rename, tpl)
         return self.htmx_success(

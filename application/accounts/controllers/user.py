@@ -45,9 +45,7 @@ class UserController(HTMXMixin, Controller):
     ) -> Template:
         filters = []
         if search:
-            filters.append(
-                SearchFilter(field_name="username", value=search, ignore_case=True)
-            )
+            filters.append(SearchFilter(field_name="username", value=search, ignore_case=True))
         pagination = await service.paginate(
             *filters,
             load=[selectinload(User.roles)],
@@ -64,17 +62,13 @@ class UserController(HTMXMixin, Controller):
     @get("new", name="users:new", guards=[create_permission])
     async def new(self, role_service: RoleService, current_user: User) -> Template:
         form = UserCreateForm()
-        form.roles.choices = [
-            (str(r.id), r.name) for r in await role_service.get_many()
-        ]
+        form.roles.choices = [(str(r.id), r.name) for r in await role_service.get_many()]
         # 角色分配收归超管(帝国式): 非超管不能给用户分配角色——否则能制造
         # 比自己权限还高的账号, 形成提权路径。与 edit/destroy「非超管不碰超管」
         # 同一套逻辑。非超管只改用户基本信息(密码/启停), 角色由超管配。
         if not current_user.is_superuser:
             del form.roles
-        return self.htmx_render(
-            template_name="user_form.html.j2", context={"form": form}
-        )
+        return self.htmx_render(template_name="user_form.html.j2", context={"form": form})
 
     @get(
         "{item_id:uuid}/edit",
@@ -93,16 +87,12 @@ class UserController(HTMXMixin, Controller):
         if user.is_superuser and not current_user.is_superuser:
             return self.htmx_error("无权编辑超级管理员")
         form = UserEditForm(obj=user)
-        form.roles.choices = [
-            (str(r.id), r.name) for r in await role_service.get_many()
-        ]
+        form.roles.choices = [(str(r.id), r.name) for r in await role_service.get_many()]
         form.roles.data = [str(r.id) for r in user.roles]
         # 角色分配收归超管: 非超管不渲染角色字段。超管不受限。
         if not current_user.is_superuser:
             del form.roles
-        return self.htmx_render(
-            template_name="user_form.html.j2", context={"form": form}
-        )
+        return self.htmx_render(template_name="user_form.html.j2", context={"form": form})
 
     @post(name="users:create", guards=[create_permission])
     async def create(
@@ -113,9 +103,7 @@ class UserController(HTMXMixin, Controller):
         current_user: User,
     ) -> Response | Template:
         form = UserCreateForm(data)
-        form.roles.choices = [
-            (str(r.id), r.name) for r in await role_service.get_many()
-        ]
+        form.roles.choices = [(str(r.id), r.name) for r in await role_service.get_many()]
         # 角色分配收归超管: 非超管提交时忽略 roles(防绕过——手动 POST roles 也无效),
         # 创建无角色用户, 由超管事后配角色。超管不受限。
         if not current_user.is_superuser:
@@ -123,9 +111,7 @@ class UserController(HTMXMixin, Controller):
         if form.validate():
             await service.create(form.data)
             return self.htmx_success("添加成功", redirect=data.get("url"))
-        return self.htmx_render(
-            template_name="user_form.html.j2", context={"form": form}
-        )
+        return self.htmx_render(template_name="user_form.html.j2", context={"form": form})
 
     @post(
         "{item_id:uuid}",
@@ -145,9 +131,7 @@ class UserController(HTMXMixin, Controller):
         if target.is_superuser and not current_user.is_superuser:
             return self.htmx_error("无权编辑超级管理员")
         form = UserEditForm(data)
-        form.roles.choices = [
-            (str(r.id), r.name) for r in await role_service.get_many()
-        ]
+        form.roles.choices = [(str(r.id), r.name) for r in await role_service.get_many()]
         # 角色分配收归超管: 非超管提交时忽略 roles(防绕过——手动 POST roles 也无效),
         # 保留目标原角色不更新。超管不受限。
         if not current_user.is_superuser:
@@ -161,9 +145,7 @@ class UserController(HTMXMixin, Controller):
                 return self.htmx_error("不能禁用自己", redirect=data.get("url"))
             await service.update(form_data, item_id, load=selectinload(User.roles))
             return self.htmx_success("更新成功", redirect=data.get("url"))
-        return self.htmx_render(
-            template_name="user_form.html.j2", context={"form": form}
-        )
+        return self.htmx_render(template_name="user_form.html.j2", context={"form": form})
 
     @get(
         "{item_id:uuid}/destroy",

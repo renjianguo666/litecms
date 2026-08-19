@@ -68,7 +68,7 @@ wx.ready(function () {
 });
 </script>""")
 
-    def __init__(self, request: "Request", *api_list: str) -> None:
+    def __init__(self, request: Request, *api_list: str) -> None:
         self.request = request
         self.api_list = (
             list(api_list)
@@ -87,12 +87,11 @@ wx.ready(function () {
         if self._access_token["expires_at"] > now:
             return self._access_token["value"]
         timeout = aiohttp.ClientTimeout(total=10)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(
-                self._TOKEN_URL.format(appid=self.appid, secret=self.app_secret)
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json(content_type=None)
+        async with aiohttp.ClientSession(timeout=timeout) as session, session.get(
+            self._TOKEN_URL.format(appid=self.appid, secret=self.app_secret)
+        ) as resp:
+            resp.raise_for_status()
+            data = await resp.json(content_type=None)
         token = data.get("access_token", "")
         if token:
             self._access_token["value"] = token
@@ -107,10 +106,11 @@ wx.ready(function () {
         if not token:
             return ""
         timeout = aiohttp.ClientTimeout(total=10)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(self._TICKET_URL.format(token=token)) as resp:
-                resp.raise_for_status()
-                data = await resp.json(content_type=None)
+        async with aiohttp.ClientSession(timeout=timeout) as session, session.get(
+            self._TICKET_URL.format(token=token)
+        ) as resp:
+            resp.raise_for_status()
+            data = await resp.json(content_type=None)
         ticket = data.get("ticket", "")
         if ticket:
             self._jsapi_ticket["value"] = ticket

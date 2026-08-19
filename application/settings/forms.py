@@ -62,7 +62,7 @@ class SettingFormBase(Form):
         try:
             tomllib.loads(text)
         except tomllib.TOMLDecodeError as e:
-            raise StopValidation(f"TOML 语法错误: {e}")
+            raise StopValidation(f"TOML 语法错误: {e}") from None
 
     def save(self) -> None:
         registered: dict[str, Any] = {}
@@ -71,7 +71,7 @@ class SettingFormBase(Form):
             if f.field_type == "list" and isinstance(val, str):
                 val = [s.strip() for s in val.split(",") if s.strip()]
             registered[f.key] = val
-        save_settings(registered, getattr(self, "template_vars").data or "")
+        save_settings(registered, self.template_vars.data or "")
 
 
 def create_setting_form() -> type[SettingFormBase]:
@@ -91,7 +91,12 @@ def create_setting_form() -> type[SettingFormBase]:
         render_kw={
             "rows": 10,
             "class": "textarea textarea-bordered w-full font-mono text-sm",
-            "placeholder": 'site_icp = "京ICP备123456号"\ncontact_email = "admin@example.com"\nsite_keywords = "博客, 技术, 分享"\nfooter_copyright = "© 2026 我的博客"',
+            "placeholder": (
+                'site_icp = "京ICP备123456号"\n'
+                'contact_email = "admin@example.com"\n'
+                'site_keywords = "博客, 技术, 分享"\n'
+                'footer_copyright = "© 2026 我的博客"'
+            ),
         },
     )
 

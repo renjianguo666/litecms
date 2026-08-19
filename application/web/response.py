@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Any, Iterable, cast
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, cast
 
 from jinja2 import Environment, FileSystemLoader
 from litestar.contrib.jinja import JinjaTemplateEngine
@@ -55,7 +56,7 @@ class Template(Response[bytes]):
         self,
         template_name: str | list[str],
         *,
-        context: dict[str, Any] = {},
+        context: dict[str, Any] | None = None,
         background: BackgroundTask | BackgroundTasks | None = None,
         cookies: ResponseCookies | None = None,
         encoding: str = "utf-8",
@@ -68,7 +69,7 @@ class Template(Response[bytes]):
         else:
             self.template_names = template_name
 
-        self.context = context
+        self.context = context or {}
 
         super().__init__(
             background=background,

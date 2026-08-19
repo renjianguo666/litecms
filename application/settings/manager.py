@@ -76,7 +76,8 @@ def save_settings(data: dict[str, Any], free_text: str | None = None) -> None:
     # 不保护新文件; .lock 文件不被替换, inode 稳定, 锁贯穿整个写周期。
     # open 在 try 外: 失败时 lock_fd 不会被赋值, 无 fd 要关;
     # flock 移进 try: open 成功后任何异常(含 flock 信号中断)都走 finally 关 fd。
-    lock_fd = open(SETTINGS_FILE.with_suffix(".lock"), "a+") if _HAVE_FLOCK else None
+    # 锁 fd 贯穿整个写周期 (flock 到函数尾 finally), 不能 with 块提前关 fd
+    lock_fd = open(SETTINGS_FILE.with_suffix(".lock"), "a+") if _HAVE_FLOCK else None  # noqa: SIM115
     try:
         if lock_fd is not None:
             assert fcntl is not None  # lock_fd 非 None ⟺ _HAVE_FLOCK ⟺ fcntl 已 import

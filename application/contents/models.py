@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Optional
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 from uuid import UUID
 
@@ -56,7 +56,7 @@ class Content(UUIDv7AuditBase):
         index=True,
     )
 
-    creator: Mapped["User"] = relationship(
+    creator: Mapped[User] = relationship(
         back_populates="contents",
         lazy="raise",
         foreign_keys=[creator_id],
@@ -67,25 +67,25 @@ class Content(UUIDv7AuditBase):
         index=True,
     )
 
-    category: Mapped["Category"] = relationship(
+    category: Mapped[Category] = relationship(
         back_populates="contents", lazy="raise", foreign_keys=[category_id]
     )
 
-    tags: Mapped[list["Tag"]] = relationship(
+    tags: Mapped[list[Tag]] = relationship(
         secondary="taxonomies_tags_contents",
         passive_deletes=True,
         back_populates="contents",
         lazy="raise",
     )
 
-    specials: Mapped[list["Special"]] = relationship(
+    specials: Mapped[list[Special]] = relationship(
         secondary="taxonomies_specials_contents",
         passive_deletes=True,
         back_populates="contents",
         lazy="raise",
     )
 
-    features: Mapped[list["Feature"]] = relationship(
+    features: Mapped[list[Feature]] = relationship(
         secondary="taxonomies_features_contents",
         passive_deletes=True,
         back_populates="contents",
@@ -101,7 +101,7 @@ class Content(UUIDv7AuditBase):
 
     published_at: Mapped[datetime] = mapped_column(
         DateTimeUTC(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         index=True,
     )
 
@@ -109,7 +109,7 @@ class Content(UUIDv7AuditBase):
     def validate_published_at(self, _: str, value: datetime) -> datetime:
         if value.tzinfo is None:
             value = value.replace(tzinfo=cfg.tzinfo)
-        return value.astimezone(timezone.utc)
+        return value.astimezone(UTC)
 
     @hybrid_property
     def creator_username(self) -> str:
@@ -149,5 +149,5 @@ class Content(UUIDv7AuditBase):
             return urljoin(self.category.domain, self.url)
         return urljoin(get_settings("site_url", ""), self.url)
 
-    def to_dict(self, exclude: Optional[set[str]] = None) -> dict[str, Any]:
+    def to_dict(self, exclude: set[str] | None = None) -> dict[str, Any]:
         return {**super().to_dict(exclude=exclude or set()), "url": self.url}

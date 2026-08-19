@@ -62,7 +62,7 @@ class FeatureSchema(Schema):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        setattr(self, "is_active", "是" if self.is_active else "否")
+        self.is_active = "是" if self.is_active else "否"
 
 
 class TagSchema(Schema):

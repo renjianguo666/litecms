@@ -139,21 +139,20 @@ class PushLogService(PaginationServiceMixin, SQLAlchemyAsyncRepositoryService[Pu
         for attempt in range(self._PUSH_MAX_RETRIES + 1):
             should_retry = False
             try:
-                async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.post(
-                        api_url,
-                        data=body,
-                        headers={"Content-Type": "text/plain"},
-                    ) as resp:
-                        text = await resp.text()
-                        try:
-                            result = json.loads(text)
-                        except json.JSONDecodeError, ValueError:
-                            result = {"error": f"响应非 JSON: {text[:200]}"}
-                        # 5xx: 百度偶发, 重试; 2xx/4xx: 不重试
-                        if resp.status >= 500 and attempt < self._PUSH_MAX_RETRIES:
-                            should_retry = True
-            except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                async with aiohttp.ClientSession(timeout=timeout) as session, session.post(
+                    api_url,
+                    data=body,
+                    headers={"Content-Type": "text/plain"},
+                ) as resp:
+                    text = await resp.text()
+                    try:
+                        result = json.loads(text)
+                    except (json.JSONDecodeError, ValueError):
+                        result = {"error": f"响应非 JSON: {text[:200]}"}
+                    # 5xx: 百度偶发, 重试; 2xx/4xx: 不重试
+                    if resp.status >= 500 and attempt < self._PUSH_MAX_RETRIES:
+                        should_retry = True
+            except (TimeoutError, aiohttp.ClientError) as exc:
                 # 网络/超时/连接错误: 重试, 末次保留错误
                 result = {"error": str(exc)}
                 if attempt < self._PUSH_MAX_RETRIES:

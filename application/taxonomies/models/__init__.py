@@ -7,8 +7,8 @@ __all__ = [
     "Category",
     "Feature",
     "FeatureContent",
-    "Tag",
-    "TagContent",
     "Special",
     "SpecialContent",
+    "Tag",
+    "TagContent",
 ]

@@ -4,7 +4,6 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
-from uuid import uuid7
 
 from alibabacloud_oss_v2 import Config as OSSConfig
 from alibabacloud_oss_v2 import PutObjectRequest as OSSPutObjectRequest
@@ -13,6 +12,7 @@ from alibabacloud_oss_v2.credentials import (
     StaticCredentialsProvider as OSSCredentialsProvider,
 )
 from litestar.concurrency import sync_to_thread
+from uuid_utils import uuid7
 
 from application.config import cfg
 
@@ -34,7 +34,7 @@ def _detect_ext(content: bytes) -> str:
 
 def _generate_key(ext: str) -> str:
     """生成 年/月/uuid7.ext 形式的存储 key,uuid7 天然按时间排序"""
-    now = datetime.now()
+    now = datetime.now(cfg.tzinfo)
     filename = f"{uuid7().hex}{ext}"
     return f"{now.year}{now.month:02d}/{filename}"
 
