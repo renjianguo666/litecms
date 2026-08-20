@@ -95,8 +95,9 @@ class SecurityPlugin(InitPlugin):
                 secret=sha256(cfg.secret_key.encode()).digest(),
                 key="session",
                 max_age=self._SESSION_MAX_AGE,
-                # 生产环境 HTTPS 下标记 Secure, 防中间人截获 cookie; 开发 http 保持关闭
-                secure=not cfg.debug,
+                # 默认不强制 Secure: HTTP/HTTPS 下都能正常登录(安装即用)。
+                # 纯 HTTPS 部署想开启加固(仅 HTTPS 携带 cookie)时, .env 设 SESSION_COOKIE_SECURE=true。
+                secure=bool(cfg.session_cookie_secure),
                 # 限制 cookie 仅同站携带, 防御跨站提交
                 samesite="strict",
                 httponly=True,

@@ -93,9 +93,7 @@ class CommandPlugin(CLIPlugin):
             granian_exe = venv_bin / "granian"
 
             if not granian_exe.exists():
-                click.echo(
-                    f"❌ 未找到 {granian_exe}，请确保虚拟环境已安装 granian", err=True
-                )
+                click.echo(f"❌ 未找到 {granian_exe}，请确保虚拟环境已安装 granian", err=True)
                 return
 
             sock_path = f"/tmp/{project_name}.sock"
@@ -149,10 +147,6 @@ server {{
     # 静态资源/上传直接由 nginx 从 public/ 出, 其余走后端
     root {cfg.public_dir};
 
-    location /static {{
-        expires 30d;
-    }}
-
     location / {{
         try_files $uri @{project_name}_backend;
     }}
@@ -171,15 +165,11 @@ server {{
             click.echo(f"✅ 配置文件已生成至 {deploy_dir}")
             click.echo("\n📌 手动部署步骤：")
             click.echo("  1. 复制 systemd 服务并启用：")
-            click.echo(
-                f"     sudo cp {deploy_dir}/{project_name}.service /etc/systemd/system/"
-            )
+            click.echo(f"     sudo cp {deploy_dir}/{project_name}.service /etc/systemd/system/")
             click.echo("     sudo systemctl daemon-reload")
             click.echo(f"     sudo systemctl enable --now {project_name}")
             click.echo("  2. 复制 Nginx 配置并重载：")
-            click.echo(
-                f"     sudo cp {deploy_dir}/nginx.conf /etc/nginx/sites-enabled/{project_name}"
-            )
+            click.echo(f"     sudo cp {deploy_dir}/nginx.conf /etc/nginx/sites-enabled/{project_name}")
             click.echo("     sudo nginx -t && sudo systemctl reload nginx")
             click.echo("  3. 查看状态/日志：")
             click.echo(f"     sudo systemctl status {project_name}")

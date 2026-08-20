@@ -32,6 +32,10 @@ class Config(Struct, rename="upper", dict=True):
     # === 应用基础 ===
     debug: bool = False
 
+    # session cookie 的 Secure 标志(可选加固): 默认 False=HTTP/HTTPS 都能登录, 安装即用。
+    # 纯 HTTPS 部署想启用加固(仅 HTTPS 携带 cookie)时, .env 设 SESSION_COOKIE_SECURE=true。
+    session_cookie_secure: bool = False
+
     root_dir: Path = BASE_DIR
     app_dir: Path = BASE_DIR / "application"
     storage_dir: Path = BASE_DIR / "storages"
