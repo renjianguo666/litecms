@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import asyncio
-from datetime import UTC, datetime, timedelta
 from functools import cached_property
+from hashlib import sha256
 from typing import Any, cast
 
 from advanced_alchemy.extensions.litestar.providers import create_service_provider
@@ -10,14 +9,13 @@ from litestar import Request
 from litestar.config.app import AppConfig
 from litestar.di import Provide
 from litestar.exceptions import NotAuthorizedException
-from litestar.middleware.session.server_side import (
-    ServerSideSessionBackend,
-    ServerSideSessionConfig,
+from litestar.middleware.session.client_side import (
+    ClientSideSessionBackend,
+    CookieBackendConfig,
 )
 from litestar.plugins import InitPlugin
 from litestar.response import Redirect
 from litestar.security.session_auth import SessionAuth
-from litestar.stores.file import FileStore
 from litestar.types.empty import Empty
 from sqlalchemy.orm import selectinload
 
@@ -75,11 +73,10 @@ def provide_user(request: Request[User, Any, Any]) -> User:
 
 
 class SecurityPlugin(InitPlugin):
-    # session store 不单独建 FileStore: app 的 stores 即 cfg.stores
-    # (default_factory 按名惰性创建, 目录 storages/runtime/sessions/),
-    # 与响应缓存/taxonomies 缓存共用同一套 store 机制, 参数不漂移。
+    # 客户端 session (加密签名 cookie, 存浏览器): 服务器不落盘 ->
+    # 无 session 文件堆积/IO/多 worker 共享存储问题, 且 pw_fp 指纹
+    # 仍由 retrieve_user_handler 校验(改密踢出), 安全特性不丢。
     _SESSION_MAX_AGE = 86400 * 7
-    _SESSION_STORE_KEY = "sessions"
 
     def on_app_init(self, app_config: AppConfig) -> AppConfig:
         app_config = self.session_backend.on_app_init(app_config)
@@ -87,49 +84,21 @@ class SecurityPlugin(InitPlugin):
             provide_user, sync_to_thread=False
         )
         app_config.exception_handlers[NotAuthorizedException] = not_authorized_handler
-        self._setup_after_response(app_config)
         return app_config
 
     @cached_property
-    def session_backend(self) -> SessionAuth[User, ServerSideSessionBackend]:
-        return SessionAuth[User, ServerSideSessionBackend](
+    def session_backend(self) -> SessionAuth[User, ClientSideSessionBackend]:
+        return SessionAuth[User, ClientSideSessionBackend](
             retrieve_user_handler=retrieve_user_handler,
-            session_backend_config=ServerSideSessionConfig(
-                store=self._SESSION_STORE_KEY,
+            session_backend_config=CookieBackendConfig(
+                # secret 必须 16/24/32 字节: sha256(secret_key) 得 32 字节 (256 bit)
+                secret=sha256(cfg.secret_key.encode()).digest(),
+                key="session",
                 max_age=self._SESSION_MAX_AGE,
                 # 生产环境 HTTPS 下标记 Secure, 防中间人截获 cookie; 开发 http 保持关闭
                 secure=not cfg.debug,
                 # 限制 cookie 仅同站携带, 防御跨站提交
                 samesite="strict",
+                httponly=True,
             ),
         )
-
-    def _setup_after_response(self, app_config: AppConfig) -> None:
-        if app_config.after_response is None:
-            app_config.after_response = self._cleanup_expired_sessions
-        else:
-            original = app_config.after_response
-
-            async def combined(request: Request) -> None:
-                result = original(request)
-                if asyncio.iscoroutine(result):
-                    await result
-                await self._cleanup_expired_sessions(request)
-
-            app_config.after_response = combined
-
-    async def _cleanup_expired_sessions(self, request: Request) -> None:
-        now = datetime.now(UTC)
-        # 不传 default: key 不存在时返回 None, 用 None 区分"从未清理过"。
-        # 若 default 填 now, 则 now-now==0 条件恒 False, key 永不写入 ->
-        # 永远走 default -> 死循环, delete_expired() 一次都不执行。
-        last_cleared = request.app.state.get("sessions_last_cleared")
-        if last_cleared is None or now - last_cleared > timedelta(
-            days=1
-        ):  # 首次或每天清理一次
-            # registry.get 类型上是 Store(基类), delete_expired 是 FileStore 专有;
-            # 实际实现即 cfg.stores 的 default_factory 创建的 FileStore
-            await cast(
-                FileStore, request.app.stores.get(self._SESSION_STORE_KEY)
-            ).delete_expired()
-            request.app.state["sessions_last_cleared"] = now

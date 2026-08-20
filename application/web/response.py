@@ -108,9 +108,7 @@ class Template(Response[bytes]):
             )
 
         headers = {**headers, **self.headers} if headers is not None else self.headers
-        cookies = (
-            self.cookies if cookies is None else itertools.chain(self.cookies, cookies)
-        )
+        cookies = self.cookies if cookies is None else itertools.chain(self.cookies, cookies)
 
         template = None
         for template_name in self.template_names:
@@ -121,15 +119,13 @@ class Template(Response[bytes]):
                 continue
 
         if template is None:
-            raise TemplateNotFoundException(
-                template_name=self.template_names[0] if self.template_names else ""
-            )
+            raise TemplateNotFoundException(template_name=self.template_names[0] if self.template_names else "")
 
         context = self.create_template_context(request)
         encoding = self.encoding
         response_background = self.background or background
         response_media_type = media_type or self.media_type
-        response_status = status_code or self.status_code
+        response_status = self.status_code or status_code
 
         async def asgi_app(scope: Scope, receive: Receive, send: Send) -> None:
             # 渲染推迟到 ASGIApp 执行时: 此时在事件循环内, 可 await render_async,

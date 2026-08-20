@@ -57,9 +57,7 @@ def build_permalink(rule: str, model: Category | Content) -> str:
         {dd}       日（补零）
     """
     dt: datetime = (
-        getattr(model, "published_at", None)
-        or getattr(model, "created_at", None)
-        or datetime.now(cfg.tzinfo)
+        getattr(model, "published_at", None) or getattr(model, "created_at", None) or datetime.now(cfg.tzinfo)
     )
 
     ctx: dict[str, str] = {

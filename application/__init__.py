@@ -19,11 +19,12 @@ def create_app() -> Litestar:
         route_handlers=route_handlers,
         on_shutdown=[close_storage],
         plugins=[
+            plugins.structlog,
             plugins.htmx,
             plugins.sqlalchemy,
             plugins.security,
             plugins.cli,
-            # plugins.debug_toolbar,
+            plugins.debug_toolbar,
         ],
         stores=cfg.stores,
         response_cache_config=cfg.response_cache_config,

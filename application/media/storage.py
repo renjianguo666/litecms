@@ -4,6 +4,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
+from uuid import uuid7
 
 from alibabacloud_oss_v2 import Config as OSSConfig
 from alibabacloud_oss_v2 import PutObjectRequest as OSSPutObjectRequest
@@ -12,7 +13,6 @@ from alibabacloud_oss_v2.credentials import (
     StaticCredentialsProvider as OSSCredentialsProvider,
 )
 from litestar.concurrency import sync_to_thread
-from uuid_utils import uuid7
 
 from application.config import cfg
 
@@ -81,9 +81,7 @@ class OSSStorage:
     async def save(self, content: bytes) -> str:
         key = _generate_key(_detect_ext(content))
         full_key = f"{self.prefix}/{key}" if self.prefix else key
-        await self.client.put_object(
-            OSSPutObjectRequest(bucket=self.bucket, key=full_key, body=content)
-        )
+        await self.client.put_object(OSSPutObjectRequest(bucket=self.bucket, key=full_key, body=content))
         return f"{self.cdn_url}/{full_key}"
 
 
@@ -113,9 +111,7 @@ def get_storage() -> Storage:
             use_internal=cfg.oss_use_internal,
         )
     if any(oss_config):
-        raise RuntimeError(
-            "OSS 配置不完整: OSS_ACCESS_KEY/OSS_SECRET_KEY/OSS_REGION/OSS_BUCKET 必须全部配置"
-        )
+        raise RuntimeError("OSS 配置不完整: OSS_ACCESS_KEY/OSS_SECRET_KEY/OSS_REGION/OSS_BUCKET 必须全部配置")
     return LocalStorage(upload_root=cfg.public_dir / "uploads")
 
 

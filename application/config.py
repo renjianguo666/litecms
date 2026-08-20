@@ -59,6 +59,8 @@ class Config(Struct, rename="upper", dict=True):
 
     @property
     def template(self) -> TemplateConfig:
+        # 函数内 import 避免 config <-> settings.manager 循环依赖
+        # (manager 模块级 import config.get_config, 模块级引入会循环)。
         from application.settings.manager import register_template_callables
 
         return TemplateConfig(
@@ -100,9 +102,9 @@ class Config(Struct, rename="upper", dict=True):
         runtime_dir = self.storage_dir / "runtime"
         runtime_dir.mkdir(parents=True, exist_ok=True)
         return StoreRegistry(
-            default_factory=lambda name: FileStore(
-                create_directories=True, path=runtime_dir
-            ).with_namespace(name.replace("_", ""))
+            default_factory=lambda name: FileStore(create_directories=True, path=runtime_dir).with_namespace(
+                name.replace("_", "")
+            )
         )
 
     @property
@@ -132,9 +134,7 @@ def get_config() -> Config:
         config.oss_bucket,
     )
     if any(oss_fields) and not all(oss_fields):
-        raise RuntimeError(
-            "OSS 配置不完整: OSS_ACCESS_KEY/OSS_SECRET_KEY/OSS_REGION/OSS_BUCKET 必须全部配置"
-        )
+        raise RuntimeError("OSS 配置不完整: OSS_ACCESS_KEY/OSS_SECRET_KEY/OSS_REGION/OSS_BUCKET 必须全部配置")
 
     if not os.environ.get("SECRET_KEY") and not config.debug:
         raise RuntimeError("生产环境必须通过环境变量 SECRET_KEY 设置密钥")

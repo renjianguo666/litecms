@@ -4,7 +4,7 @@ import re
 from collections.abc import Sequence
 from contextlib import suppress
 from typing import Any, Generic
-from uuid import UUID
+from uuid import UUID, uuid7
 
 from advanced_alchemy.exceptions import RepositoryError
 from advanced_alchemy.filters import CollectionFilter
@@ -16,7 +16,6 @@ from advanced_alchemy.service import (
     schema_dump,
 )
 from advanced_alchemy.service.typing import ModelDictT
-from fastnanoid import generate
 from litestar.exceptions import ClientException
 from litestar.status_codes import HTTP_409_CONFLICT
 from litestar.utils.path import normalize_path
@@ -24,13 +23,12 @@ from pypinyin import Style, lazy_pinyin
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
-from uuid_utils import uuid7
 
 from application.checks import check_path_unique
 from application.contents.models import Content
 from application.contents.services import ContentRepository
 from application.mixins import PaginationServiceMixin
-from application.permalink import build_permalink
+from application.permalink import build_permalink, uuid_to_base31
 
 from .models import Category, Feature, Special, Tag
 
@@ -50,7 +48,7 @@ def _make_tag_slug(name: str, existing_slugs: set[str]) -> str:
         5. 拼音冲突 -> changcheng / changcheng2 / changcheng3
     """
     if not name or not name.strip():
-        return f"t-{generate(size=10)}"
+        return f"t-{uuid_to_base31(uuid7())[:10]}"
 
     parts = lazy_pinyin(name.strip(), style=Style.NORMAL)
     joined = "".join(parts).lower()
@@ -59,7 +57,7 @@ def _make_tag_slug(name: str, existing_slugs: set[str]) -> str:
     slug = re.sub(r"-+", "-", slug)
 
     if not slug:
-        return f"t-{generate(size=10)}"
+        return f"t-{uuid_to_base31(uuid7())[:10]}"
 
     if slug in existing_slugs:
         base = slug
@@ -77,7 +75,7 @@ def _make_tag_slug(name: str, existing_slugs: set[str]) -> str:
 def _make_feature_slug(name: str, existing_slugs: set[str]) -> str:
     """把 Feature 名字转为 slug (规则同 _make_tag_slug, 前缀 f-)。"""
     if not name or not name.strip():
-        return f"f-{generate(size=10)}"
+        return f"f-{uuid_to_base31(uuid7())[:10]}"
 
     parts = lazy_pinyin(name.strip(), style=Style.NORMAL)
     joined = "".join(parts).lower()
@@ -86,7 +84,7 @@ def _make_feature_slug(name: str, existing_slugs: set[str]) -> str:
     slug = re.sub(r"-+", "-", slug)
 
     if not slug:
-        return f"f-{generate(size=10)}"
+        return f"f-{uuid_to_base31(uuid7())[:10]}"
 
     if slug in existing_slugs:
         base = slug
@@ -117,9 +115,7 @@ class FeatureRepository(SQLAlchemyAsyncRepository[Feature]):
 type CategoryTree = list[dict[str, Any]]
 
 
-class CategoryService(
-    PaginationServiceMixin, SQLAlchemyAsyncRepositoryService[Category]
-):
+class CategoryService(PaginationServiceMixin, SQLAlchemyAsyncRepositoryService[Category]):
     repository_type = CategoryRepository
     loader_options = [Category.parent]
 
@@ -148,9 +144,7 @@ class CategoryService(
         return tree
 
     async def get_tree(self, root_id: UUID | None = None):
-        return self.build_tree(
-            await self.get_many(order_by=[("priority", True)]), root_id
-        )
+        return self.build_tree(await self.get_many(order_by=[("priority", True)]), root_id)
 
     async def get_root_categories(self) -> Sequence[Category]:
         return await self.get_many(order_by=[("priority", True)], parent_id=None)
@@ -161,9 +155,7 @@ class CategoryService(
         )
         await super().delete(item_id, **kwargs)
 
-    async def to_model_on_create(
-        self, data: ModelDictT[Category]
-    ) -> ModelDictT[Category]:
+    async def to_model_on_create(self, data: ModelDictT[Category]) -> ModelDictT[Category]:
         model = await super().to_model(
             {
                 "id": uuid7(),
@@ -181,13 +173,9 @@ class CategoryService(
         await check_path_unique(self.repository.session, model.path)
         return model
 
-    async def update(
-        self, data: ModelDictT[Category], item_id: Any | None = None, **kwargs
-    ) -> Category:
+    async def update(self, data: ModelDictT[Category], item_id: Any | None = None, **kwargs) -> Category:
         model = await super().to_model(data, "update")
-        pk_value = item_id or self.repository.get_id_attribute_value(
-            data, id_attribute=kwargs.get("id_attribute")
-        )
+        pk_value = item_id or self.repository.get_id_attribute_value(data, id_attribute=kwargs.get("id_attribute"))
         if pk_value is None:
             raise RepositoryError("Could not identify ID attribute value")
 
@@ -206,28 +194,20 @@ class CategoryService(
 
             # ② 父变 → 重算自身 trail → 级联子孙
             if old_parent_id != updated.parent_id:
-                updated.trail = (
-                    f"{new_parent.trail}.{updated.id}"
-                    if new_parent
-                    else str(updated.id)
-                )
+                updated.trail = f"{new_parent.trail}.{updated.id}" if new_parent else str(updated.id)
             if old_trail != updated.trail:
                 await self._update_descendants_trail(old_trail, updated.trail)
 
             # ③ path 仅用户显式改才重算（移动不动 URL）
             if old_path != updated.path:
                 if updated.parent_id:
-                    updated.parent = new_parent or await self.repository.get(
-                        updated.parent_id, load=[Category.parent]
-                    )
+                    updated.parent = new_parent or await self.repository.get(updated.parent_id, load=[Category.parent])
                 else:
                     updated.parent = None
                 updated.path = normalize_path(self._generate_path(updated))
                 # 跨表 path 唯一校验(与 create 对齐): Category path 与 Page/Content
                 # path 跨表无 DB 约束, 重算后必须校验, 排除自身 id。
-                await check_path_unique(
-                    self.repository.session, updated.path, exclude_id=updated.id
-                )
+                await check_path_unique(self.repository.session, updated.path, exclude_id=updated.id)
 
             updated.content_path = normalize_path(updated.content_path)
         except Exception:
@@ -242,12 +222,8 @@ class CategoryService(
         if not parent_id:
             return None
         parent = await self.repository.get(parent_id, load=[Category.parent])
-        if parent.trail == current_node.trail or parent.trail.startswith(
-            f"{current_node.trail}."
-        ):
-            raise ClientException(
-                "不能移动到自己的子孙栏目下", status_code=HTTP_409_CONFLICT
-            )
+        if parent.trail == current_node.trail or parent.trail.startswith(f"{current_node.trail}."):
+            raise ClientException("不能移动到自己的子孙栏目下", status_code=HTTP_409_CONFLICT)
         return parent
 
     async def _update_descendants_trail(self, old_trail: str, new_trail: str) -> None:
@@ -274,9 +250,7 @@ class ContentAssociationServiceMixin(PaginationServiceMixin, Generic[ModelT]):  
         if not content_ids:
             return
 
-        item = await self.get(
-            item_id, load=[selectinload(self.repository.model_type.contents)]
-        )
+        item = await self.get(item_id, load=[selectinload(self.repository.model_type.contents)])
         existing_ids = {c.id for c in item.contents}
         pending_ids = [cid for cid in content_ids if cid not in existing_ids]
         if not pending_ids:
@@ -293,9 +267,7 @@ class ContentAssociationServiceMixin(PaginationServiceMixin, Generic[ModelT]):  
         if not content_ids:
             return
 
-        item = await self.get(
-            item_id, load=[selectinload(self.repository.model_type.contents)]
-        )
+        item = await self.get(item_id, load=[selectinload(self.repository.model_type.contents)])
         existing = {c.id: c for c in item.contents}
         to_remove = [existing[cid] for cid in content_ids if cid in existing]
         if not to_remove:
@@ -340,9 +312,7 @@ class TagService(ContentAssociationServiceMixin, SQLAlchemyAsyncRepositoryServic
         session = self.repository.session
 
         # 查已存在的 Tag（大小写不敏感）
-        stmt = select(Tag).where(
-            func.lower(Tag.name).in_([n.lower() for n in unique_names])
-        )
+        stmt = select(Tag).where(func.lower(Tag.name).in_([n.lower() for n in unique_names]))
         existing = list((await session.execute(stmt)).scalars().all())
         existing_lower = {t.name.lower(): t for t in existing}
 
@@ -370,9 +340,7 @@ class TagService(ContentAssociationServiceMixin, SQLAlchemyAsyncRepositoryServic
                 except IntegrityError:
                     # SAVEPOINT 已自动 rollback, 外层事务不受影响
                     concurrent = (
-                        await session.execute(
-                            select(Tag).where(func.lower(Tag.name) == key)
-                        )
+                        await session.execute(select(Tag).where(func.lower(Tag.name) == key))
                     ).scalar_one_or_none()
                     if concurrent is not None:
                         # 同名并发插入: 复用已有
@@ -386,20 +354,14 @@ class TagService(ContentAssociationServiceMixin, SQLAlchemyAsyncRepositoryServic
         return result
 
 
-class SpecialService(
-    ContentAssociationServiceMixin, SQLAlchemyAsyncRepositoryService[Special]
-):
+class SpecialService(ContentAssociationServiceMixin, SQLAlchemyAsyncRepositoryService[Special]):
     repository_type = SpecialRepository
 
 
-class FeatureService(
-    ContentAssociationServiceMixin, SQLAlchemyAsyncRepositoryService[Feature]
-):
+class FeatureService(ContentAssociationServiceMixin, SQLAlchemyAsyncRepositoryService[Feature]):
     repository_type = FeatureRepository
 
-    async def to_model_on_create(
-        self, data: ModelDictT[Feature]
-    ) -> ModelDictT[Feature]:
+    async def to_model_on_create(self, data: ModelDictT[Feature]) -> ModelDictT[Feature]:
         """表单没传 slug 时自动生成（中文转拼音，英文保留，冲突加数字后缀）。"""
         if not is_dict(data):
             data = schema_dump(data)

@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from math import log, sqrt
 from random import randint
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from uuid import UUID, uuid7
 
 import rjieba
 from advanced_alchemy.filters import CollectionFilter
@@ -14,7 +14,6 @@ from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService, schema_du
 from advanced_alchemy.service.typing import ModelDictT
 from litestar.concurrency import sync_to_thread
 from selectolax.parser import HTMLParser
-from uuid_utils import uuid7
 
 from application.mixins import PaginationServiceMixin
 from application.permalink import build_permalink
@@ -82,11 +81,7 @@ def _truncate_at_boundary(text: str, max_chars: int) -> str:
 
 
 def _tokenize_sentence(sentence: str) -> list[str]:
-    return [
-        t
-        for w in rjieba.cut(sentence)
-        if (t := w.strip()) and len(t) > 1 and t not in _STOPWORDS
-    ]
+    return [t for w in rjieba.cut(sentence) if (t := w.strip()) and len(t) > 1 and t not in _STOPWORDS]
 
 
 def _idf(tokenized: list[list[str]]) -> dict[str, float]:
@@ -180,9 +175,7 @@ def extract_description_textrank(
 
     # 1. selectolax 提取纯文本
     tree = HTMLParser(html_text)
-    plain_text = (
-        tree.body.text(separator="\n") if tree.body else tree.text(separator="\n")
-    ).strip()
+    plain_text = (tree.body.text(separator="\n") if tree.body else tree.text(separator="\n")).strip()
 
     if not plain_text:
         return ""
@@ -196,11 +189,7 @@ def extract_description_textrank(
 
     if len(sentences) <= sentences_count:
         result = "".join(sentences)
-        return (
-            _truncate_at_boundary(result, max_chars)
-            if len(result) > max_chars
-            else result
-        )
+        return _truncate_at_boundary(result, max_chars) if len(result) > max_chars else result
 
     try:
         # 3. 分词 + TF-IDF 稀疏向量
@@ -213,9 +202,7 @@ def extract_description_textrank(
         scores = _pagerank(sim, alpha=0.85, max_iter=60, tol=1e-6)
 
         # 5. 取 top N，保持原文顺序
-        ranked_idx = sorted(
-            range(len(sentences)), key=lambda i: scores[i], reverse=True
-        )
+        ranked_idx = sorted(range(len(sentences)), key=lambda i: scores[i], reverse=True)
         top_idx = sorted(ranked_idx[:sentences_count])
         result = "".join(sentences[i] for i in top_idx)
 
@@ -277,9 +264,7 @@ class ArticleService(
         ]
         return await super().create_many(datas)
 
-    async def to_model_on_create(
-        self, data: ModelDictT[Article]
-    ) -> ModelDictT[Article]:
+    async def to_model_on_create(self, data: ModelDictT[Article]) -> ModelDictT[Article]:
         if not isinstance(data, dict):
             data = schema_dump(data)
 
@@ -296,9 +281,7 @@ class ArticleService(
 
         # 描述为空时自动提取摘要
         if not model.description:
-            model.description = await sync_to_thread(
-                extract_description_textrank, model.text
-            )
+            model.description = await sync_to_thread(extract_description_textrank, model.text)
 
         # 封面为空时自动提取正文第一张图
         if not model.cover_url:
@@ -308,15 +291,11 @@ class ArticleService(
 
         if special_ids:
             special_repo = SpecialRepository(session=self.repository.session)
-            model.specials = await special_repo.get_many(
-                CollectionFilter(field_name="id", values=special_ids)
-            )
+            model.specials = await special_repo.get_many(CollectionFilter(field_name="id", values=special_ids))
 
         if feature_ids:
             feature_repo = FeatureRepository(session=self.repository.session)
-            model.features = await feature_repo.get_many(
-                CollectionFilter(field_name="id", values=feature_ids)
-            )
+            model.features = await feature_repo.get_many(CollectionFilter(field_name="id", values=feature_ids))
 
         if tag_names:
             tag_service = TagService(session=self.repository.session)
@@ -324,9 +303,7 @@ class ArticleService(
 
         return model
 
-    async def to_model_on_update(
-        self, data: ModelDictT[Article]
-    ) -> ModelDictT[Article]:
+    async def to_model_on_update(self, data: ModelDictT[Article]) -> ModelDictT[Article]:
         if not isinstance(data, dict):
             data = schema_dump(data)
 
@@ -352,15 +329,11 @@ class ArticleService(
 
         if feature_updated_ids is not None:
             feature_repo = FeatureRepository(session=self.repository.session)
-            data.features = await feature_repo.get_many(
-                CollectionFilter(field_name="id", values=feature_updated_ids)
-            )
+            data.features = await feature_repo.get_many(CollectionFilter(field_name="id", values=feature_updated_ids))
 
         if special_updated_ids is not None:
             special_repo = SpecialRepository(session=self.repository.session)
-            data.specials = await special_repo.get_many(
-                CollectionFilter(field_name="id", values=special_updated_ids)
-            )
+            data.specials = await special_repo.get_many(CollectionFilter(field_name="id", values=special_updated_ids))
 
         if tag_names is not None:
             tag_service = TagService(session=self.repository.session)
@@ -368,9 +341,7 @@ class ArticleService(
 
         return data
 
-    async def update(
-        self, data: ModelDictT[Article], item_id: Any | None = None, **kwargs
-    ) -> Article:
+    async def update(self, data: ModelDictT[Article], item_id: Any | None = None, **kwargs) -> Article:
         history = await self.repository.get(item_id)
         old_category_id = history.category_id
 
@@ -379,9 +350,7 @@ class ArticleService(
         if model.category_id != old_category_id:
             # repository.update 内部 merge(load=False) 会过期已加载的关系,
             # 必须重新取新分类; 顺带修复: 原逻辑用的是旧分类的模板/旧 {category}
-            model.category = await CategoryRepository(
-                session=self.repository.session
-            ).get(model.category_id)
+            model.category = await CategoryRepository(session=self.repository.session).get(model.category_id)
             model.path = build_permalink(model.category.content_path, model)
 
         return model

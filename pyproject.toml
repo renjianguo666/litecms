@@ -21,8 +21,8 @@ dependencies = [
     "selectolax>=0.4.11",
     "nh3>=0.3.6",
     "granian>=2.8.1",
-    "fastnanoid>=0.4.3",
-    "uuid-utils>=0.17.0",
+    "structlog>=26.1.0",
+    "cryptography>=50.0.0",
 ]
 
 [[tool.uv.index]]
