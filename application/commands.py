@@ -84,7 +84,8 @@ class CommandPlugin(CLIPlugin):
         def deploy(app: Litestar, domain: str) -> None:
 
             # 通过环境变量或默认值（灵活配置）
-            user = os.getenv("USER")
+            # SUDO_USER 优先: sudo 执行时 USER=root, 会以 root 跑 granian; 用真实登录用户更安全。
+            user = os.getenv("SUDO_USER") or os.getenv("USER") or "root"
             group = user
 
             project_name = cfg.root_dir.name
@@ -98,13 +99,12 @@ class CommandPlugin(CLIPlugin):
                 return
 
             sock_path = f"/tmp/{project_name}.sock"
-            log_path = cfg.storage_dir / "logs" / "granian.log"
             deploy_dir = cfg.storage_dir / "deploy"
             deploy_dir.mkdir(exist_ok=True)
 
             # 1. 生成 systemd service
             exec_start = (
-                f"ExecStart={granian_exe} --interface asgi --factory --workers 1 "
+                f"{granian_exe} --interface asgi --factory --workers 1 "
                 f"--uds {sock_path} --uds-permissions 666 application:create_app"
             )
             service_content = f"""\
@@ -117,14 +117,14 @@ Type=simple
 User={user}
 Group={group}
 WorkingDirectory={cfg.root_dir}
-Environment="PATH={venv_bin}:/usr/bin"
-{exec_start}
+# 进程被 OOM 杀/崩溃时不会 unlink socket, 残留会导致下次绑定失败;
+# ExecStartPre 启动前先清掉, 避免 Restart=always 无限重启崩溃循环。
+ExecStartPre=/bin/rm -f {sock_path}
+ExecStart={exec_start}
 Restart=always
 RestartSec=5
 MemoryHigh=550M
 MemoryMax=800M
-StandardOutput=append:{log_path}
-StandardError=append:{log_path}
 
 
 [Install]
@@ -143,17 +143,21 @@ server {{
     listen 80;
     server_name {domain};
 
+    # 与应用 request_max_body_size 对齐(默认 1m 会挡掉图片上传)
+    client_max_body_size 10m;
+
+    # 静态资源/上传直接由 nginx 从 public/ 出, 其余走后端
+    root {cfg.public_dir};
+
     location /static {{
-        alias {cfg.public_dir}/static;
         expires 30d;
     }}
 
     location / {{
-        try_files $uri @{project_name};
+        try_files $uri @{project_name}_backend;
     }}
 
-
-    location @{project_name} {{
+    location @{project_name}_backend {{
         proxy_pass http://{project_name}_backend;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
