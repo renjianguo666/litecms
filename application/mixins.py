@@ -105,7 +105,7 @@ class PaginationServiceMixin[ModelT](_ServiceMixin):
         schema_type: type[Struct] | None = None,
         statement: Select[tuple[ModelT]] | None = None,
         auto_expunge: bool | None = None,
-        count_with_window_function: bool | None = None,
+        count_with_window_function: bool | None = False,
         order_by: list[OrderingPair] | OrderingPair | None = None,
         error_messages: ErrorMessages | EmptyType | None = Empty,
         load: LoadSpec | None = None,

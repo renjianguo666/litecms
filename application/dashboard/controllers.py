@@ -10,7 +10,7 @@ from litestar import Controller, get
 from litestar.response import Template
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from application.articles.services import ArticleService
+from application.contents.services import ContentService
 from application.guards import PermissionGuard
 from application.htmx import HTMXMixin
 
@@ -55,20 +55,19 @@ class DashboardController(HTMXMixin, Controller):
     path = "/"
 
     dependencies = {
-        "article_service": create_service_provider(ArticleService),
+        "content_service": create_service_provider(ContentService),
     }
 
     @get(name="dashboard:index", guards=[view_permission])
     async def index(
         self,
         db_session: AsyncSession,
-        article_service: ArticleService,
+        content_service: ContentService,
     ) -> Template:
         info = _get_sys_info(db_session)
 
-        recent_articles = await article_service.get_many(
-            LimitOffset(limit=10, offset=0),
-            OrderBy(field_name="created_at", sort_order="desc"),
+        recent_articles = await content_service.get_many(
+            LimitOffset(limit=10, offset=0), OrderBy(field_name="published_at", sort_order="desc")
         )
 
         return self.htmx_render(

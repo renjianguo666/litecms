@@ -62,7 +62,7 @@ class ArticleController(HTMXMixin, Controller):
             *filters,
             page=page,
             page_size=page_size,
-            order_by=[("created_at", True)],
+            order_by=[("published_at", True)],
             load=[
                 selectinload(Article.category),
                 selectinload(Article.creator),
