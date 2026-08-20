@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 from litestar.config.compression import CompressionConfig
 from litestar.config.csrf import CSRFConfig
-from litestar.config.response_cache import ResponseCacheConfig
+from litestar.config.response_cache import ResponseCacheConfig, default_do_cache_predicate
 from litestar.contrib.jinja import JinjaTemplateEngine
 from litestar.openapi import OpenAPIConfig
 from litestar.stores.file import FileStore
@@ -109,7 +109,17 @@ class Config(Struct, rename="upper", dict=True):
 
     @property
     def response_cache_config(self) -> ResponseCacheConfig:
-        return ResponseCacheConfig(store="response")
+        # 只缓存无查询参数的请求: ?page=N 等翻页变体一律不缓存,
+        # 避免每个唯一 URL(含 query)都落盘成缓存文件, 也无串页风险。
+        return ResponseCacheConfig(
+            store="response",
+            # 带查询参数(?page=N 等翻页变体)不缓存: 不落盘、不串页, 只缓存无参 path。
+            # 状态码沿用默认规则: 缓存 2xx 及 301/308 永久重定向。
+            cache_response_filter=(
+                lambda scope, status_code: not scope.get("query_string")
+                and default_do_cache_predicate(scope, status_code)
+            ),
+        )
 
 
 @lru_cache
