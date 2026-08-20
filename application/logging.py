@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from sys import stderr, stdout
+from typing import Literal
 
 import structlog
 from litestar.logging.config import (
@@ -55,8 +56,10 @@ def create_structlog_config() -> StructlogConfig:
         ASGI_ACCESS_LEVEL = logging.WARNING
         SQLALCHEMY_LEVEL = logging.WARNING
 
-    REQUEST_FIELDS: list[str] = ["path", "method", "query", "path_params"]
-    RESPONSE_FIELDS: list[str] = ["status_code"]
+    REQUEST_FIELDS: list[
+        Literal["path", "method", "query", "path_params"]
+    ] = ["path", "method", "query", "path_params"]
+    RESPONSE_FIELDS: list[Literal["status_code"]] = ["status_code"]
 
     return StructlogConfig(
         structlog_logging_config=StructLoggingConfig(
