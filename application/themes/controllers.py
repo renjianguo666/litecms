@@ -11,7 +11,9 @@ from litestar.response import Response, Template
 
 from application.config import get_config
 from application.guards import PermissionGuard
+from application.settings.manager import get_settings, save_settings
 from application.htmx import HTMXMixin
+
 
 from .forms import CreateTemplateForm, TemplateWriteForm
 from .utils import get_template, get_templates
@@ -107,12 +109,15 @@ class TemplateController(HTMXMixin, Controller):
                 "template_path": target,
                 "template_content": content,
                 "form": CreateTemplateForm(),
-                # 固定文件模板开关状态: active(原件在) / disabled(bak 在) / none(未创建)
+                # 固定文件模板开关状态: active(原件在) / disabled(bak 在) / none(未启用, 启用即创建)
                 "fixed_states": states,
                 # 当前编辑的文件是否处于禁用态(原件不在仅 .bak 在), 模板显示提示条
                 "template_disabled": bool(target) and states.get(target) == "disabled",
+                "template_dev_mode": bool(get_settings("template_dev_mode", False)),
             },
         )
+
+
 
     async def _read_template(self, path: Path) -> str:
         """读模板内容: 原件存在读原件, 否则读 .bak(禁用态内容在备份里, 编辑器不空)。
@@ -127,7 +132,7 @@ class TemplateController(HTMXMixin, Controller):
         return ""
 
     def _fixed_states(self, kind: str) -> dict[str, str]:
-        """固定文件模板启用状态: 原文件在=active, 仅 .bak 在=disabled, 都没有=none。"""
+        """固定文件模板启用状态: 原文件在=active, 仅 .bak 在=disabled, 都没有=none(未启用)。"""
         states: dict[str, str] = {}
         if kind not in FIXED_KINDS:
             return states
@@ -150,7 +155,9 @@ class TemplateController(HTMXMixin, Controller):
         )
 
     @post("create", name="templates:create", guards=[create_permission])
-    async def create(self, data: URLEncodedBody[FormMultiDict]) -> Response | Template:
+    async def create(
+        self, request: Request, data: URLEncodedBody[FormMultiDict]
+    ) -> Response | Template:
         form = CreateTemplateForm(formdata=data)
         if not form.validate():
             return self.htmx_render(
@@ -186,7 +193,13 @@ class TemplateController(HTMXMixin, Controller):
         except (PermissionError, FileNotFoundError, OSError):
             return self.htmx_error("创建模板失败", skip_redirect=True)
 
-        return self.htmx_success("创建成功")
+        # 创建成功后带 kind+target 跳回列表并定位到新文件(打开编辑器),
+        # 与 disable/enable 一致, 不落回空列表页
+        target = f"{form.name.data}/index.html" if is_cate else f"{form.name.data}.html"
+        return self.htmx_success(
+            "创建成功",
+            redirect=f"{request.url_for('templates:index')}?kind={form.kind.data}&target={target}",
+        )
 
     @post(name="templates:write", guards=[write_permission])
     async def save(self, data: URLEncodedBody[FormMultiDict]) -> Response:
@@ -257,17 +270,51 @@ class TemplateController(HTMXMixin, Controller):
         if kind not in FIXED_KINDS or name not in FIXED_KINDS[kind]:
             return self.htmx_error("非法的模板文件", skip_redirect=True)
         root = TEMPLATE_ROOT if kind == "index" else TEMPLATE_ROOT / kind
+        tpl = root / name
         bak = root / f"{name}.bak"
         if bak.exists():
-            tpl = root / name
             if tpl.exists():
                 await sync_to_thread(
                     bak.unlink
                 )  # 禁用期间保存过新内容(原件重建): 不覆盖, 丢旧备份
             else:
                 await sync_to_thread(bak.rename, tpl)
+        elif not tpl.exists():
+            # 从未创建(none): 启用即直接创建空文件, 少一个「创建」逻辑;
+            # 启用后自动跳进编辑器填内容
+            await sync_to_thread(tpl.parent.mkdir, parents=True, exist_ok=True)
+            await sync_to_thread(tpl.touch)
         return self.htmx_success(
             "已启用模板",
             # 带 target 跳回当前编辑的文件, 不落回空编辑器
             redirect=f"{request.url_for('templates:index')}?kind={kind}&target={name}",
+        )
+
+    @post("dev-mode", name="templates:dev_mode", guards=[write_permission])
+    async def dev_mode(
+        self,
+        request: Request,
+        kind: FromQuery[TemplateKind] = "categories",
+        target: FromQuery[str] | None = None,
+    ) -> Response:
+        """模板开发者模式开关(仅模板管理页可见, 不注册进系统设置)。
+
+        写 settings.toml 同 key, mtime 热重载即生效, 无需重启:
+        开启 → 前台模板错误输出带"文件:行号"的开发者详情页 + 前台不缓存;
+        关闭 → 恢复纯净 500 与正常缓存。
+
+        纯开关: HX 请求只回 toast 不重渲染页面(skip_redirect=True),
+        开关视觉由浏览器原生翻转; redirect 仅作非 HX 直连的 302 兜底。
+        """
+        current = bool(get_settings("template_dev_mode", False))
+        save_settings({"template_dev_mode": not current})
+        redirect = f"{request.url_for('templates:index')}?kind={kind}"
+        if target:
+            redirect += f"&target={target}"
+        return self.htmx_success(
+            "已开启模板开发者模式: 前台 500 显示详情 + 不缓存"
+            if not current
+            else "已关闭模板开发者模式: 前台恢复纯净 500 + 缓存",
+            redirect=redirect,
+            skip_redirect=True,
         )

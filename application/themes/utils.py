@@ -28,3 +28,14 @@ def get_template(kind: str, name: str) -> Path:
         raise FileNotFoundError("模板不存在")
 
     return target
+
+
+def get_template_dev_mode() -> bool:
+    """模板开发者模式开关(settings.toml, mtime 热重载, 无需重启)。
+
+    开关入口在模板管理页(本模块域内), 不注册进系统设置。
+    懒加载 get_settings 避免 config <-> settings.manager 模块级循环依赖。
+    """
+    from application.settings.manager import get_settings
+
+    return bool(get_settings("template_dev_mode", False))

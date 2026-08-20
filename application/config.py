@@ -120,8 +120,12 @@ class Config(Struct, rename="upper", dict=True):
             # 带查询参数(?page=N 等翻页变体)不缓存: 不落盘、不串页, 只缓存无参 path。
             # 状态码沿用默认规则: 缓存 2xx 及 301/308 永久重定向。
             cache_response_filter=(
-                lambda scope, status_code: not scope.get("query_string")
-                and default_do_cache_predicate(scope, status_code)
+                lambda scope, status_code: (
+                    not scope.get("query_string")
+                    and default_do_cache_predicate(scope, status_code)
+                    # 模板开发者模式开启时前台一律不缓存: 改模板即时生效, 不用重启
+                    and not _template_dev_mode()
+                )
             ),
         )
 
@@ -154,6 +158,17 @@ def get_config() -> Config:
         raise RuntimeError("生产环境必须通过环境变量 SECRET_KEY 设置密钥")
 
     return config
+
+
+def _template_dev_mode() -> bool:
+    """模板开发者模式开关(逻辑在 themes 模块, settings.toml mtime 热重载)。
+
+    开启时前台不缓存(缓存过滤器每次请求都执行, 读到的始终是最新值)。
+    懒加载避免 config <-> themes.utils 模块级循环依赖。
+    """
+    from application.themes.utils import get_template_dev_mode
+
+    return get_template_dev_mode()
 
 
 cfg = get_config()

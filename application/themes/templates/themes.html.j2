@@ -6,14 +6,29 @@
       <h2 class="text-xl font-semibold ps-2">
         模板管理
       </h2>
-      <div role="tablist" class="tabs tabs-border">
-        {% for key, val in kinds.items() %}
-          <a
-            href="{{ url_for('templates:index') ~ '?kind=' ~ key }}"
-            role="tab"
-            class="tab {{ 'tab-active' if kind == key else '' }}"
-          >{{ val }}</a>
-        {% endfor %}
+      <div class="flex items-center gap-4">
+        <div role="tablist" class="tabs tabs-border">
+          {% for key, val in kinds.items() %}
+            <a
+              href="{{ url_for('templates:index') ~ '?kind=' ~ key }}"
+              role="tab"
+              class="tab {{ 'tab-active' if kind == key else '' }}"
+            >{{ val }}</a>
+          {% endfor %}
+        </div>
+        <label
+          class="flex items-center gap-2 cursor-pointer select-none"
+          title="模板开发者模式: 开启后前台模板错误显示『文件:行号』详情且不缓存(热切换, 无需重启), 调试完请关闭"
+        >
+          <input
+            type="checkbox"
+            class="toggle toggle-sm toggle-warning"
+            {% if template_dev_mode %}checked{% endif %}
+            hx-post="{{ url_for('templates:dev_mode') }}?kind={{ kind }}{% if template_path %}&target={{ template_path }}{% endif %}"
+            hx-swap="none"
+          >
+          <span class="text-xs text-base-content/60">开发者模式</span>
+        </label>
       </div>
     </div>
 
@@ -89,11 +104,11 @@
                           {% elif st == "disabled" %}
                             <span class="badge badge-warning badge-xs">已禁用</span>
                           {% else %}
-                            <span class="badge badge-ghost badge-xs">未创建</span>
+                            <span class="badge badge-ghost badge-xs">未启用</span>
                           {% endif %}
                         {% endif %}
                       </a>
-                      {% if kind in ("index", "tags") and st != "none" and request.user.has_permission("templates:update") %}
+                      {% if kind in ("index", "tags") and request.user.has_permission("templates:update") %}
                         {% if st == "active" %}
                           <form method="post" action="{{ url_for('templates:disable') }}" hx-swap="none">
                             <input type="hidden" name="kind" value="{{ kind }}">
@@ -182,7 +197,9 @@
       const lineCountDisplay = document.getElementById("line-count-display");
       const unsavedMark = document.getElementById("unsaved-mark");
       const form = document.getElementById("template-form");
-      if (!textarea) return;
+      // 同一 textarea 只绑定一次; 本脚本会被 hx-boost/HX-Location 整页刷新反复执行
+      if (!textarea || textarea.dataset.bound) return;
+      textarea.dataset.bound = "1";
 
       function updateLineNumbers() {
         const lines = textarea.value.split("\n").length;
@@ -195,10 +212,6 @@
 
       function markUnsaved() {
         unsavedMark?.classList.remove("hidden");
-      }
-
-      function markSaved() {
-        unsavedMark?.classList.add("hidden");
       }
 
       updateLineNumbers();
@@ -215,6 +228,7 @@
       textarea.addEventListener("keydown", (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === "s") {
           e.preventDefault();
+          if (e.repeat) return; // 按住不放时 keydown 重复触发, 只提交一次
           if (!textarea.disabled) {
             // 直发请求, 不走 submit 事件派发: htmx.trigger(form,"submit") 会经
             // form 增强监听器处理, 存在重复请求的可能
@@ -236,14 +250,24 @@
         }
       });
 
+    }
+
+    // 本脚本会随 hx-boost / HX-Location 整页局部刷新被反复执行,
+    // body 级事件监听只能注册一次: 否则 afterSettle 监听堆积会让 initEditor
+    // 对同一 textarea 重复绑定 → Ctrl+S 重复提交。
+    if (!document.body.dataset.editorReady) {
+      document.body.dataset.editorReady = "1";
+      document.body.addEventListener("htmx:afterSettle", (e) => {
+        if (e.detail.target.id === "editor") initEditor();
+      });
       document.body.addEventListener("showToast", (e) => {
-        if (e.detail.type === "success") markSaved();
+        if (e.detail.type === "success") {
+          document.getElementById("unsaved-mark")?.classList.add("hidden");
+        }
       });
     }
 
-    document.addEventListener("DOMContentLoaded", initEditor);
-    document.body.addEventListener("htmx:afterSettle", (e) => {
-      if (e.detail.target.id === "editor") initEditor();
-    });
+    // 页面刚经 boost/HX-Location 刷新进来时 #editor 已就绪, 直接初始化
+    initEditor();
   </script>
 {% endblock %}
