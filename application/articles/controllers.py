@@ -10,7 +10,7 @@ from litestar import Controller, Response, get, post
 from litestar.datastructures import FormMultiDict
 from litestar.params import FromPath, FromQuery, QueryParameter, URLEncodedBody
 from litestar.response import Template
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import defer, selectinload
 
 from application.accounts.models import User
 from application.articles.forms import ArticleDestroyForm, ArticleEditForm, ArticleForm
@@ -57,9 +57,7 @@ class ArticleController(HTMXMixin, Controller):
     ) -> Template:
         filters = []
         if search:
-            filters.append(
-                SearchFilter(field_name="title", value=search, ignore_case=True)
-            )
+            filters.append(SearchFilter(field_name="title", value=search, ignore_case=True))
         pagination = await service.paginate(
             *filters,
             page=page,
@@ -68,6 +66,7 @@ class ArticleController(HTMXMixin, Controller):
             load=[
                 selectinload(Article.category),
                 selectinload(Article.creator),
+                defer(Article.text),
             ],
             schema_type=ArticleSchema,
         )
@@ -161,9 +160,7 @@ class ArticleController(HTMXMixin, Controller):
 
         form.category.data = str(obj.category_id)
         form.tags.data = [t.name for t in obj.tags]
-        form.published_at.data = obj.published_at.astimezone(cfg.tzinfo).replace(
-            tzinfo=None, microsecond=0
-        )
+        form.published_at.data = obj.published_at.astimezone(cfg.tzinfo).replace(tzinfo=None, microsecond=0)
         return self.htmx_render(
             template_name="article_form.html.j2",
             context={

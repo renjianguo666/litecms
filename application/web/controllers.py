@@ -6,7 +6,7 @@ from litestar.status_codes import HTTP_404_NOT_FOUND
 from msgspec import convert
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import defer, joinedload, selectinload
 
 from application.articles.models import Article
 from application.articles.services import ArticleService
@@ -71,10 +71,7 @@ class WebController(Controller):
             page_size=page_size,
             order_by=[("published_at", False)],
             schema_type=ArticleLiteSchema,
-            load=[
-                selectinload(Article.category),
-                selectinload(Article.creator),
-            ],
+            load=[selectinload(Article.category), selectinload(Article.creator), defer(Article.text)],
         )
         return Template(
             ["tags/show.html", "web_tag.html"],
@@ -102,10 +99,7 @@ class WebController(Controller):
             page_size=page_size,
             order_by=[("published_at", False)],
             schema_type=ArticleLiteSchema,
-            load=[
-                selectinload(Article.category),
-                selectinload(Article.creator),
-            ],
+            load=[selectinload(Article.category), selectinload(Article.creator), defer(Article.text)],
         )
 
         return Template(
@@ -188,10 +182,7 @@ class WebController(Controller):
             page_size=category.page_size or 20,
             order_by=[("published_at", False)],
             schema_type=ArticleLiteSchema,
-            load=[
-                selectinload(Article.category),
-                selectinload(Article.creator),
-            ],
+            load=[selectinload(Article.category), selectinload(Article.creator), defer(Article.text)],
         )
 
         template = ["web_category_index.html" if category.children else "web_category.html"]
