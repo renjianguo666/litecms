@@ -20,8 +20,8 @@ from application.articles.services import ArticleService
 from application.config import cfg
 from application.guards import PermissionGuard
 from application.htmx import HTMXMixin
-from application.taxonomies.breadcrumbs import resolve_breadcrumbs
 from application.taxonomies.cache import get_categories_cached
+from application.taxonomies.hierarchy import build_tree, resolve_breadcrumbs
 from application.taxonomies.schemas import TagSchema
 from application.taxonomies.services import (
     CategoryService,
@@ -87,18 +87,18 @@ class ArticleController(HTMXMixin, Controller):
         special_service: SpecialService,
         feature_service: FeatureService,
     ) -> Template:
-        all_categories = await category_service.get_many()
+        categories = await get_categories_cached(category_service.repository.session)
         all_features = await feature_service.get_many()
         all_specials = await special_service.get_many()
         form = ArticleForm()
         form.features.choices = [(str(f.id), f.name) for f in all_features]
         form.specials.choices = [(str(s.id), s.name) for s in all_specials]
-        form.categories.choices = [(str(c.id), c.name) for c in all_categories]
+        form.categories.choices = [(str(c.id), c.name) for c in categories]
         return self.htmx_render(
             template_name="article_form.html.j2",
             context={
                 "form": form,
-                "category_tree": category_service.build_tree(all_categories),
+                "category_tree": build_tree(categories),
             },
         )
 
@@ -112,13 +112,13 @@ class ArticleController(HTMXMixin, Controller):
         special_service: SpecialService,
         feature_service: FeatureService,
     ) -> Response | Template:
-        all_categories = await category_service.get_many()
+        categories = await get_categories_cached(category_service.repository.session)
         all_features = await feature_service.get_many()
         all_specials = await special_service.get_many()
         form = ArticleForm(data)
         form.features.choices = [(str(f.id), f.name) for f in all_features]
         form.specials.choices = [(str(s.id), s.name) for s in all_specials]
-        form.categories.choices = [(str(s.id), s.name) for s in all_categories]
+        form.categories.choices = [(str(s.id), s.name) for s in categories]
         if form.validate():
             await service.create_many_for_categories(form.data, creator=current_user)
             return self.htmx_success("添加成功", redirect=data.get("url"))
@@ -126,7 +126,7 @@ class ArticleController(HTMXMixin, Controller):
             template_name="article_form.html.j2",
             context={
                 "form": form,
-                "category_tree": await category_service.get_tree(),
+                "category_tree": build_tree(categories),
             },
         )
 
@@ -148,13 +148,13 @@ class ArticleController(HTMXMixin, Controller):
                 selectinload(Article.features),
             ],
         )
-        all_categories = await category_service.get_many()
+        categories = await get_categories_cached(category_service.repository.session)
         all_features = await feature_service.get_many()
         all_specials = await special_service.get_many()
         form = ArticleEditForm(obj=obj)
         form.features.choices = [(str(f.id), f.name) for f in all_features]
         form.specials.choices = [(str(s.id), s.name) for s in all_specials]
-        form.category.choices = [(str(c.id), c.name) for c in all_categories]
+        form.category.choices = [(str(c.id), c.name) for c in categories]
         form.features.data = [str(f.id) for f in obj.features]
         form.specials.data = [str(s.id) for s in obj.specials]
 
@@ -165,7 +165,7 @@ class ArticleController(HTMXMixin, Controller):
             template_name="article_form.html.j2",
             context={
                 "form": form,
-                "category_tree": category_service.build_tree(all_categories),
+                "category_tree": build_tree(categories),
             },
         )
 
@@ -179,13 +179,13 @@ class ArticleController(HTMXMixin, Controller):
         special_service: SpecialService,
         feature_service: FeatureService,
     ) -> Response:
-        all_categories = await category_service.get_many()
+        categories = await get_categories_cached(category_service.repository.session)
         all_features = await feature_service.get_many()
         all_specials = await special_service.get_many()
         form = ArticleEditForm(data)
         form.features.choices = [(str(f.id), f.name) for f in all_features]
         form.specials.choices = [(str(s.id), s.name) for s in all_specials]
-        form.category.choices = [(str(c.id), c.name) for c in all_categories]
+        form.category.choices = [(str(c.id), c.name) for c in categories]
         if form.validate():
             await service.update(
                 form.data,
@@ -202,7 +202,7 @@ class ArticleController(HTMXMixin, Controller):
             template_name="article_form.html.j2",
             context={
                 "form": form,
-                "category_tree": category_service.build_tree(all_categories),
+                "category_tree": build_tree(categories),
             },
         )
 

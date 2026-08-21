@@ -31,7 +31,6 @@ def create_app() -> Litestar:
         template_config=cfg.template,
         csrf_config=cfg.csrf,
         compression_config=cfg.compression,
-        openapi_config=cfg.openapi,
         request_max_body_size=cfg.request_max_body_size,
         exception_handlers=exception_handler,
         type_decoders=[(is_form_multidict, to_form_multidict)],
@@ -64,8 +63,4 @@ def is_form_multidict(target_type: type) -> bool:
 
 
 def to_form_multidict(target_type: type, value: Any) -> FormMultiDict:
-    return (
-        value
-        if isinstance(value, FormMultiDict)
-        else FormMultiDict.from_form_data(value)
-    )
+    return value if isinstance(value, FormMultiDict) else FormMultiDict.from_form_data(value)

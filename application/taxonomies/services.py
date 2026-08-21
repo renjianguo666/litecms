@@ -19,6 +19,7 @@ from advanced_alchemy.service.typing import ModelDictT
 from litestar.exceptions import ClientException
 from litestar.status_codes import HTTP_409_CONFLICT
 from litestar.utils.path import normalize_path
+from msgspec import convert
 from pypinyin import Style, lazy_pinyin
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
@@ -29,6 +30,8 @@ from application.contents.models import Content
 from application.contents.services import ContentRepository
 from application.mixins import PaginationServiceMixin
 from application.permalink import build_permalink, uuid_to_base31
+from application.taxonomies.hierarchy import Tree, build_tree
+from application.taxonomies.schemas import CategorySchema
 
 from .models import Category, Feature, Special, Tag
 
@@ -112,39 +115,14 @@ class FeatureRepository(SQLAlchemyAsyncRepository[Feature]):
     model_type = Feature
 
 
-type CategoryTree = list[dict[str, Any]]
-
-
 class CategoryService(PaginationServiceMixin, SQLAlchemyAsyncRepositoryService[Category]):
     repository_type = CategoryRepository
     loader_options = [Category.parent]
 
-    @staticmethod
-    def build_tree(
-        categories: Sequence[Category],
-        root_id: UUID | None = None,
-    ) -> CategoryTree:
-
-        if not categories:
-            return []
-
-        nodes = [{**cat.to_dict(), "children": []} for cat in categories]
-        node_dict = {node["id"]: node for node in nodes}
-        tree: CategoryTree = []
-
-        for node in nodes:
-            if node["parent_id"] and node["parent_id"] in node_dict:
-                node_dict[node["parent_id"]]["children"].append(node)
-            else:
-                tree.append(node)
-
-        if root_id is not None:
-            return [node_dict[root_id]] if root_id in node_dict else []
-
-        return tree
-
-    async def get_tree(self, root_id: UUID | None = None):
-        return self.build_tree(await self.get_many(order_by=[("priority", True)]), root_id)
+    async def get_tree(self, root_id: UUID | None = None) -> Tree[CategorySchema]:
+        rows = await self.get_many(order_by=[("priority", True)])
+        categories = convert(rows, list[CategorySchema], from_attributes=True)
+        return build_tree(categories, root_id)
 
     async def get_root_categories(self) -> Sequence[Category]:
         return await self.get_many(order_by=[("priority", True)], parent_id=None)

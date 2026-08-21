@@ -14,6 +14,8 @@ from application.contents.enums import PublishStatus
 from application.contents.models import Content
 from application.pages.services import PageService
 from application.seo.hooks import before_request_sitemap_handler
+from application.taxonomies.cache import get_categories_cached
+from application.taxonomies.hierarchy import resolve_breadcrumbs
 from application.taxonomies.models import Category
 from application.taxonomies.services import (
     CategoryService,
@@ -23,7 +25,6 @@ from application.taxonomies.services import (
 
 from . import urls
 from .plugin import plugin
-from .response import Template
 from .schemas import (
     ArticleLiteSchema,
     ArticleSchema,
@@ -33,6 +34,17 @@ from .schemas import (
     SpecialSchema,
     TagSchema,
 )
+from .template import Template
+
+
+async def get_breadcrumbs(db_session: AsyncSession, trail: str) -> list[CategoryLiteSchema]:
+    """面包屑: 从栏目缓存解析祖先链 (父→子), 转前台轻量 Schema, 零 SQL。"""
+    categories = await get_categories_cached(db_session)
+    return convert(
+        resolve_breadcrumbs(categories, trail=trail),
+        list[CategoryLiteSchema],
+        from_attributes=True,
+    )
 
 
 class WebController(Controller):
@@ -157,14 +169,7 @@ class WebController(Controller):
         if category is None:
             return None
 
-        breadcrumbs = convert(
-            await service.get_many(
-                Category.id.in_(category.trail.split(".")),
-                order_by=[("trail", False)],
-            ),
-            list[CategoryLiteSchema],
-            from_attributes=True,
-        )
+        breadcrumbs = await get_breadcrumbs(db_session, category.trail)
 
         article_service = ArticleService(session=db_session)
 
@@ -233,20 +238,7 @@ class WebController(Controller):
         if article is None:
             return None
 
-        # 面包屑: 取栏目祖先链 (转 CategoryLiteSchema, 统一用 schema)
-        ancestor_ids = [part for part in article.category.trail.split(".") if part]
-        breadcrumbs = (
-            convert(
-                await CategoryService(session=db_session).get_many(
-                    Category.id.in_(ancestor_ids),
-                    order_by=[("trail", False)],
-                ),
-                list[CategoryLiteSchema],
-                from_attributes=True,
-            )
-            if ancestor_ids
-            else []
-        )
+        breadcrumbs = await get_breadcrumbs(db_session, article.category.trail)
 
         template = ["web_article.html"]
         if article.category.template:

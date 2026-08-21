@@ -58,11 +58,7 @@ class CategoryController(HTMXMixin, Controller):
                 from_attributes=True,
             )
         else:
-            categories = convert(
-                await service.get_tree(),
-                list[CategorySchema],
-                from_attributes=True,
-            )
+            categories = await service.get_tree()
 
         return self.htmx_render(
             template_name="categories.html.j2",

@@ -10,7 +10,6 @@ from litestar.config.compression import CompressionConfig
 from litestar.config.csrf import CSRFConfig
 from litestar.config.response_cache import ResponseCacheConfig, default_do_cache_predicate
 from litestar.contrib.jinja import JinjaTemplateEngine
-from litestar.openapi import OpenAPIConfig
 from litestar.stores.file import FileStore
 from litestar.stores.registry import StoreRegistry
 from litestar.template.config import TemplateConfig
@@ -53,6 +52,10 @@ class Config(Struct, rename="upper", dict=True):
     oss_use_internal: bool = False
     oss_cdn_url: str = ""
 
+    # ===== 微信公众号配置 =====
+    wechat_app_id: str = ""
+    wechat_app_secret: str = ""
+
     # === 数据库 ===
     database_url: str = f"sqlite+aiosqlite:///{BASE_DIR}/storages/cms.db"
     database_echo: bool = False
@@ -63,15 +66,12 @@ class Config(Struct, rename="upper", dict=True):
 
     @property
     def template(self) -> TemplateConfig:
-        # 函数内 import 避免 config <-> settings.manager 循环依赖
-        # (manager 模块级 import config.get_config, 模块级引入会循环)。
         from application.settings.manager import register_template_callables
 
         return TemplateConfig(
             engine=JinjaTemplateEngine,
             engine_callback=register_template_callables,
             directory=[
-                self.app_dir / "templates",
                 self.app_dir / "accounts/templates",
                 self.app_dir / "articles/templates",
                 self.app_dir / "dashboard/templates",
@@ -86,10 +86,6 @@ class Config(Struct, rename="upper", dict=True):
     @property
     def compression(self) -> CompressionConfig:
         return CompressionConfig(backend="gzip")
-
-    @property
-    def openapi(self) -> OpenAPIConfig | None:
-        return OpenAPIConfig(title="My API", version="1.0.0")
 
     @property
     def csrf(self) -> CSRFConfig:

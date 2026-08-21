@@ -14,7 +14,7 @@ from litestar.utils.deprecation import warn_deprecation
 
 from application.config import cfg
 from application.settings.manager import TemplateSettings
-from application.web import jinja2
+from application.web import helpers
 
 if TYPE_CHECKING:
     from litestar.app import Litestar
@@ -42,11 +42,11 @@ template_engine = JinjaTemplateEngine.from_environment(
     )
 )
 template_engine.engine.globals["settings"] = TemplateSettings()
-template_engine.engine.globals["category_select"] = jinja2.category_select
-template_engine.engine.globals["tag_select"] = jinja2.tag_select
-template_engine.engine.globals["special_select"] = jinja2.special_select
-template_engine.engine.globals["article_select"] = jinja2.article_select
-template_engine.engine.globals["wechat_share"] = jinja2.wechat_share
+template_engine.engine.globals["category_select"] = helpers.category_select
+template_engine.engine.globals["tag_select"] = helpers.tag_select
+template_engine.engine.globals["special_select"] = helpers.special_select
+template_engine.engine.globals["article_select"] = helpers.article_select
+template_engine.engine.globals["wechat_share"] = helpers.wechat_share
 
 
 class Template(Response[bytes]):
