@@ -102,6 +102,7 @@ class ArticleLiteSchema(Schema):
     id: UUID
     title: str
     url: str
+    absolute_url: str
     description: str | None
     cover_url: str | None
     source: str | None
