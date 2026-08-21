@@ -147,7 +147,7 @@ async def tag_select(
         filters.append(LimitOffset(limit=limit, offset=0))
     result = await TagService(session=session).get_many(
         *filters,
-        order_by=[(order_by, order_dir == "asc")],
+        order_by=[(order_by, order_dir == "desc")],
     )
     return convert(result, list[TagSchema], from_attributes=True)
 
@@ -175,7 +175,7 @@ async def special_select(
         filters.append(LimitOffset(limit=limit, offset=0))
     result = await SpecialService(session=session).get_many(
         *filters,
-        order_by=[(order_by, order_dir == "asc")],
+        order_by=[(order_by, order_dir == "desc")],
     )
     return convert(result, list[SpecialSchema], from_attributes=True)
 
@@ -238,7 +238,7 @@ async def article_select(
         else:
             filters.append(Article.features.any(Feature.slug == feature))
 
-    sort_order = order_dir == "asc"
+    sort_order = order_dir == "desc"
     load = [
         defer(Article.text),
         joinedload(Article.creator),
