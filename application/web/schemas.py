@@ -37,6 +37,7 @@ class CategoryLiteSchema(Schema):
     description: str | None
     cover_url: str | None
     url: str
+    absolute_url: str
     page_size: int
     parent_id: UUID | None
     path: str
