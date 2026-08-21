@@ -6,7 +6,7 @@ from wtforms import Form
 from wtforms.fields import HiddenField, StringField, SubmitField, TextAreaField
 from wtforms.validators import any_of, data_required, regexp
 
-SAFE_FILENAME_PATTERN = re.compile(r"[a-zA-Z0-9/]+\.html$")
+SAFE_FILENAME_PATTERN = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_/]*\.html$")
 
 NAME_PATTERN = re.compile(r"[a-zA-Z0-9]+")
 # index 为固定单文件(不可命名), 不参与创建
