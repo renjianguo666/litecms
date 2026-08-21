@@ -63,41 +63,59 @@ def _session_by_request(request: Any) -> AsyncSession:
 @pass_context
 async def category_select(
     ctx,
-    item_id: UUID | list[UUID] | None = None,
-    parent_id: UUID | None = None,
+    *item: UUID,
+    parent: UUID | None = None,
+    under: UUID | None = None,
     order_by: str | None = None,
     order_dir: Literal["asc", "desc"] = "asc",
 ) -> list[CategorySchema]:
-    """取栏目一层 (帝国 CMS 式, 走文件缓存, 内存过滤, 零 SQL)。
+    """取栏目 (帝国 CMS 式, 走文件缓存, 内存过滤, 零 SQL)。
 
-    标签只返回一维列表 (一层); 要多层在模板里嵌套循环, 用上一层的 id
-    作 parent_id 再调一次。每次都是缓存内存过滤, 不查库, 无 N+1。
+    四种取法互斥, 优先级 under > parent > 位置参数(按 id 取) > 无参(顶级), 每次缓存内存过滤, 不查库。
+    参数统一传栏目 id (UUID), 返回 list[CategorySchema]。
 
-    item_id: 按 id 取栏目本身 (单个或列表); 传 item_id 时忽略 parent_id;
-    parent_id: 取该栏目的直接子栏目; None (默认) = 顶级栏目;
+    位置参数 *item: 按 id 取栏目本身, 支持零到多个, 也支持单个 id 列表:
+        category_select(id1, id2, id3)      # 取 3 个指定栏目
+        category_select([id1, id2, id3])    # 等价写法
+    parent: 取某栏目的直接子栏目 (parent_id == 该 id), 一层;
+    under: 取某栏目下面的所有子栏目 (任意层级, 含子/孙/曾孙..., 不含自身),
+        trail 前缀匹配, 按树前序平铺, 口径与 category_view 分页一致。
+        聚合该栏目下所有文章时:
+            {% set cids = category_select(under=category.id)|map(attribute='id')|list %}
+            {% for item in article_select(category=cids, limit=4, cover=True) %}
     order_by: 排序字段 (Schema 属性名, 如 "priority" / "id");
-        None (默认) = 维持缓存 trail 序 (树前序);
+        None (默认) = 维持缓存 trail 序 (树前序); under 模式忽略此参数;
     order_dir: 排序方向 (asc 升序, desc 降序; priority 常用 desc, 值大在前)。
 
-    多层示例 (模板嵌套, 想几层套几层):
+    无任何参数 = 顶级栏目 (等价 category_select(parent=None)):
         {% for c in category_select(order_by="priority", order_dir="desc") %}
           {{ c.name }}
-          {% for sub in category_select(parent_id=c.id, order_by="priority", order_dir="desc") %}
-            {% for sub2 in category_select(parent_id=sub.id) %}{% endfor %}
+          {% for sub in category_select(parent=c.id, order_by="priority", order_dir="desc") %}
+            {% for sub2 in category_select(parent=sub.id) %}{% endfor %}
           {% endfor %}
         {% endfor %}
     """
     session = _session_by_request(ctx["request"])
     cats = await get_categories_cached(session)
 
-    if item_id is not None:
-        if isinstance(item_id, UUID):
-            result = [c for c in cats if c.id == item_id]
-        else:
-            id_set = set(item_id)
-            result = [c for c in cats if c.id in id_set]
+    if under is not None:
+        node = next((c for c in cats if c.id == under), None)
+        if node is None:
+            return []
+        return [c for c in cats if c.trail.startswith(f"{node.trail}.")]
+
+    if parent is not None:
+        result = [c for c in cats if c.parent_id == parent]
+    elif item:
+        wanted: set[UUID] = set()
+        for x in item:
+            if isinstance(x, (list, tuple)):
+                wanted.update(x)
+            else:
+                wanted.add(x)
+        result = [c for c in cats if c.id in wanted]
     else:
-        result = [c for c in cats if c.parent_id == parent_id]
+        result = [c for c in cats if c.parent_id is None]
 
     if order_by is not None:
         result = sorted(

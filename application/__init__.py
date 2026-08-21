@@ -30,6 +30,7 @@ def create_app() -> Litestar:
         response_cache_config=cfg.response_cache_config,
         template_config=cfg.template,
         csrf_config=cfg.csrf,
+        openapi_config=None,
         compression_config=cfg.compression,
         request_max_body_size=cfg.request_max_body_size,
         exception_handlers=exception_handler,
