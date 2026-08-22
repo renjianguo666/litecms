@@ -6,6 +6,22 @@ from wtforms import Form
 from wtforms.fields import HiddenField, StringField, SubmitField, TextAreaField
 from wtforms.validators import any_of, data_required, regexp
 
+from application.settings.fields import SettingField, SettingRegistry
+
+# 模板开发者模式: 开关入口在模板管理页(本模块域内), 由 themes 自定义渲染切换按钮。
+# 注册进 SettingRegistry: 注册 key 自然不进模板变量区(get_free_text 排除注册 key),
+# render_in_settings=False 也不进系统设置表单, 保存/读取走统一注册体系。
+SettingRegistry.register(
+    SettingField(
+        key="template_dev_mode",
+        label="模板开发者模式",
+        field_type="boolean",
+        default=False,
+        description="模板管理页开关控制, 系统设置表单不渲染",
+        render_in_settings=False,
+    )
+)
+
 SAFE_FILENAME_PATTERN = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_/]*\.html$")
 
 NAME_PATTERN = re.compile(r"[a-zA-Z0-9]+")

@@ -118,9 +118,7 @@ async def category_select(
         result = [c for c in cats if c.parent_id is None]
 
     if order_by is not None:
-        result = sorted(
-            result, key=lambda c: getattr(c, order_by), reverse=order_dir == "desc"
-        )
+        result = sorted(result, key=lambda c: getattr(c, order_by), reverse=order_dir == "desc")
 
     return result
 
@@ -204,9 +202,7 @@ async def article_select(
     """
     session = _session_by_request(ctx["request"])
     filters: list[Any] = [
-        ComparisonFilter(
-            field_name="status", operator="eq", value=PublishStatus.PUBLISHED
-        ),
+        ComparisonFilter(field_name="status", operator="eq", value=PublishStatus.PUBLISHED),
     ]
     if cover:
         filters.append(Article.cover_url.isnot(None))
@@ -216,25 +212,17 @@ async def article_select(
         if isinstance(category, list):
             filters.append(CollectionFilter(field_name="category_id", values=category))
         else:
-            filters.append(
-                ComparisonFilter(
-                    field_name="category_id", operator="eq", value=category
-                )
-            )
+            filters.append(ComparisonFilter(field_name="category_id", operator="eq", value=category))
 
     if special is not None:
         if isinstance(special, list):
-            filters.append(
-                ExistsFilter([Article.specials.any(Special.slug.in_(special))])
-            )
+            filters.append(ExistsFilter([Article.specials.any(Special.slug.in_(special))]))
         else:
             filters.append(Article.specials.any(Special.slug == special))
 
     if feature is not None:
         if isinstance(feature, list):
-            filters.append(
-                ExistsFilter([Article.features.any(Feature.slug.in_(feature))])
-            )
+            filters.append(ExistsFilter([Article.features.any(Feature.slug.in_(feature))]))
         else:
             filters.append(Article.features.any(Feature.slug == feature))
 
@@ -242,9 +230,7 @@ async def article_select(
     load = [
         defer(Article.text),
         joinedload(Article.creator),
-        joinedload(Article.category).options(
-            noload(Category.parent), noload(Category.children)
-        ),
+        joinedload(Article.category).options(noload(Category.parent), noload(Category.children)),
     ]
 
     service = ArticleService(session=session)
@@ -272,7 +258,7 @@ async def wechat_share(
 ) -> str:
     """渲染微信 JS-SDK 分享 JS, 供模板 | safe 直出。
 
-    凭据 (wechat_app_id / wechat_app_secret) 从 settings.toml 读;
+    凭据 (wechat_app_id / wechat_app_secret) 从 .env 读 (cfg), 属部署级配置;
     未配置时返回空串, 不注入 JS。签名 URL 用当前 request.url。
 
     access_token / jsapi_ticket 进程级缓存, 用 aiohttp 异步获取,

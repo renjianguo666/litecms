@@ -27,6 +27,9 @@ class SettingField:
     default: Any = ""
     description: str = ""
     group: str = "其他"
+    # False: 系统设置表单不渲染该字段(由模块自定义渲染, 如 themes 的切换按钮)。
+    # 仍注册进体系: 保存/读取统一处理, 且注册 key 自然不进模板变量区。
+    render_in_settings: bool = True
 
 
 class SettingRegistry:
@@ -53,8 +56,11 @@ class SettingRegistry:
 
     @classmethod
     def grouped(cls) -> dict[str, list[SettingField]]:
-        """按 group 分组,保持注册顺序"""
+        """按 group 分组,保持注册顺序。render_in_settings=False 的字段不进分组
+        (设置表单不渲染, 模块自定义渲染)。"""
         groups: dict[str, list[SettingField]] = {}
         for f in cls._fields:
+            if not f.render_in_settings:
+                continue
             groups.setdefault(f.group, []).append(f)
         return groups

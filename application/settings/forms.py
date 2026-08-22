@@ -67,6 +67,8 @@ class SettingFormBase(Form):
     def save(self) -> None:
         registered: dict[str, Any] = {}
         for f in SettingRegistry.fields():
+            if not f.render_in_settings:
+                continue  # 表单无控件, 不由设置表单保存(模块自行 save_settings 管理)
             val = getattr(self, f.key).data
             if f.field_type == "list" and isinstance(val, str):
                 val = [s.strip() for s in val.split(",") if s.strip()]
@@ -82,6 +84,8 @@ def create_setting_form() -> type[SettingFormBase]:
     attrs: dict[str, Any] = {}
 
     for f in SettingRegistry.fields():
+        if not f.render_in_settings:
+            continue  # 模块自定义渲染(如 themes 按钮), 不在设置表单生成控件
         attrs[f.key] = _create_field(f, settings.get(f.key))
 
     attrs["template_vars"] = TextAreaField(
