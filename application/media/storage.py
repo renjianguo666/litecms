@@ -89,7 +89,7 @@ class OSSStorage:
             bucket_info = resp.bucket_info
             if bucket_info is None:
                 raise RuntimeError(f"GetBucketInfo 未返回 bucket 信息: {self.bucket}")
-            self._bucket_url = f"https://{bucket_info.extranet_endpoint}"
+            self._bucket_url = f"https://{self.bucket}.{bucket_info.extranet_endpoint}"
         return self._bucket_url
 
     async def save(self, content: bytes) -> str:
