@@ -6,9 +6,9 @@
   {% if request.user.has_permission("dashboard:view") %}
   <li>
     <a
-      href="/admin"
-      @click="navigate('/admin')"
-      :class="{ 'menu-active': isActive('/admin', true) }"
+      href="{{ url_for("dashboard:index") }}"
+      @click="navigate('{{ url_for("dashboard:index") }}')"
+      :class="{ 'menu-active': isActive('{{ url_for("dashboard:index") }}', true) }"
     >
       <span class="icon-[lucide--layout-dashboard] text-lg opacity-75"></span>
       仪表盘
