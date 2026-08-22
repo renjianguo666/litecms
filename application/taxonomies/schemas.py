@@ -8,6 +8,24 @@ from msgspec import field as msgspec_field
 from application.schemas import Schema
 
 
+class CategoryLiteSchema(Schema):
+    """栏目轻量展示 Schema（前台/跨模块内嵌用, 如文章所属栏目）。"""
+
+    id: UUID
+    name: str
+    title: str | None
+    description: str | None
+    cover_url: str | None
+    url: str
+    absolute_url: str
+    page_size: int
+    parent_id: UUID | None
+    path: str
+    content_path: str
+    template: str | None
+    priority: int
+
+
 class CategorySchema(Schema):
     """栏目展示层 Schema（search 模式列表用）。"""
 
@@ -33,7 +51,7 @@ class CategorySchema(Schema):
 
 
 class SpecialSchema(Schema):
-    """专题展示层 Schema。"""
+    """专题展示层 Schema（前后台共用）。"""
 
     id: UUID
     name: str
@@ -48,6 +66,7 @@ class SpecialSchema(Schema):
 
     url: str
     absolute_url: str
+    template: str | None
 
 
 class FeatureSchema(Schema):

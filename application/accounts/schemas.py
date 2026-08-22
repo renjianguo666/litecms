@@ -8,6 +8,14 @@ from msgspec import field as msgspec_field
 from application.schemas import Schema
 
 
+class UserLiteSchema(Schema):
+    """用户轻量展示（作者/创建者等只读场景）。"""
+
+    id: UUID
+    username: str
+    alias: str
+
+
 class UserSchema(Schema):
     """用户展示层 Schema。"""
 

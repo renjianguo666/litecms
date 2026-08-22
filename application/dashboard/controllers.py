@@ -8,8 +8,11 @@ from advanced_alchemy.extensions.litestar.providers import create_service_provid
 from advanced_alchemy.filters import LimitOffset, OrderBy
 from litestar import Controller, get
 from litestar.response import Template
+from msgspec import convert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.contents.models import Content
+from application.contents.schemas import ContentLiteSchema
 from application.contents.services import ContentService
 from application.guards import PermissionGuard
 from application.htmx import HTMXMixin
@@ -67,10 +70,15 @@ class DashboardController(HTMXMixin, Controller):
         info = _get_sys_info(db_session)
 
         recent_articles = await content_service.get_many(
-            LimitOffset(limit=10, offset=0), OrderBy(field_name="published_at", sort_order="desc")
+            LimitOffset(limit=10, offset=0),
+            OrderBy(field_name="published_at", sort_order="desc"),
+            load=[Content.category, Content.creator],
         )
 
         return self.htmx_render(
             template_name="index.html.j2",
-            context={"sys": info, "recent_articles": recent_articles},
+            context={
+                "sys": info,
+                "recent_articles": convert(recent_articles, list[ContentLiteSchema], from_attributes=True),
+            },
         )

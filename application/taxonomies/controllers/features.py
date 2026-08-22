@@ -13,7 +13,7 @@ from sqlalchemy import select
 
 from application.contents.enums import PublishStatus
 from application.contents.models import Content
-from application.contents.schemas import ContentSchema
+from application.contents.schemas import ContentLiteSchema
 from application.contents.services import ContentService
 from application.guards import PermissionGuard
 from application.htmx import HTMXMixin
@@ -181,7 +181,7 @@ class FeatureController(HTMXMixin, Controller):
             ),
             page=page,
             page_size=page_size,
-            schema_type=ContentSchema,
+            schema_type=ContentLiteSchema,
         )
         return self.htmx_render(
             template_name="feature_manage.html.j2",
@@ -220,7 +220,7 @@ class FeatureController(HTMXMixin, Controller):
             statement=statement,
             page=page,
             page_size=page_size,
-            schema_type=ContentSchema,
+            schema_type=ContentLiteSchema,
         )
         return self.htmx_render(
             template_name="feature_manage_dialog.html.j2",

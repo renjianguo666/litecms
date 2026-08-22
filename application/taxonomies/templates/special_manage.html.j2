@@ -85,7 +85,7 @@
                   <input type="checkbox" name="content_ids" value="{{ row.id }}" class="checkbox checkbox-sm">
                 </td>
                 <td class="font-medium">{{ row.title }}</td>
-                <td class="text-base-content/60">{{ row.category_name }}</td>
+                <td class="text-base-content/60">{{ row.category.name }}</td>
                 <td class="text-base-content/60">
                   {{ row.created_at.strftime('%Y-%m-%d %H:%M') if row.created_at else '-' }}
                 </td>

@@ -318,14 +318,14 @@ class ArticleService(
         data = await super().to_model(data)
 
         # 净化 HTML
-        data.text = sanitize_html(data.text or "")
+        data.text = await sync_to_thread(sanitize_html, data.text or "")
 
         # 描述为空时自动提取摘要
         if not data.description:
-            data.description = extract_description_textrank(data.text)
+            data.description = await sync_to_thread(extract_description_textrank, data.text)
 
         if not data.cover_url:
-            data.cover_url = extract_cover_url(data.text)
+            data.cover_url = await sync_to_thread(extract_cover_url, data.text)
 
         if feature_updated_ids is not None:
             feature_repo = FeatureRepository(session=self.repository.session)

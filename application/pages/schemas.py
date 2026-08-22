@@ -7,7 +7,7 @@ from application.schemas import Schema
 
 
 class PageSchema(Schema):
-    """单页展示层 Schema。"""
+    """单页展示层 Schema（前后台共用）。"""
 
     id: UUID
     title: str
@@ -17,6 +17,10 @@ class PageSchema(Schema):
     updated_at: datetime
     url: str
     absolute_url: str
+    description: str | None
+    cover_url: str | None
+    text: str
+    template: str | None
 
     def __post_init__(self) -> None:
         super().__post_init__()

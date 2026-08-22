@@ -11,9 +11,8 @@ from litestar.response import Response, Template
 
 from application.config import get_config
 from application.guards import PermissionGuard
-from application.settings.manager import get_settings, save_settings
 from application.htmx import HTMXMixin
-
+from application.settings.manager import get_settings, save_settings
 
 from .forms import CreateTemplateForm, TemplateWriteForm
 from .utils import get_template, get_templates
@@ -117,8 +116,6 @@ class TemplateController(HTMXMixin, Controller):
             },
         )
 
-
-
     async def _read_template(self, path: Path) -> str:
         """读模板内容: 原件存在读原件, 否则读 .bak(禁用态内容在备份里, 编辑器不空)。
 
@@ -155,14 +152,10 @@ class TemplateController(HTMXMixin, Controller):
         )
 
     @post("create", name="templates:create", guards=[create_permission])
-    async def create(
-        self, request: Request, data: URLEncodedBody[FormMultiDict]
-    ) -> Response | Template:
+    async def create(self, request: Request, data: URLEncodedBody[FormMultiDict]) -> Response | Template:
         form = CreateTemplateForm(formdata=data)
         if not form.validate():
-            return self.htmx_render(
-                "theme_form.html.j2", context={"form": form}, block_name=None
-            )
+            return self.htmx_render("theme_form.html.j2", context={"form": form}, block_name=None)
 
         assert form.kind.data is not None
         assert form.name.data is not None
@@ -178,9 +171,7 @@ class TemplateController(HTMXMixin, Controller):
                 *form.name.errors,
                 f"模板已存在: {tpl.relative_to(base)}",
             ]
-            return self.htmx_render(
-                "theme_form.html.j2", context={"form": form}, block_name=None
-            )
+            return self.htmx_render("theme_form.html.j2", context={"form": form}, block_name=None)
 
         try:
             if is_cate:
@@ -238,9 +229,7 @@ class TemplateController(HTMXMixin, Controller):
         return self.htmx_success("保存成功", skip_redirect=True)
 
     @post("disable", name="templates:disable", guards=[write_permission])
-    async def disable(
-        self, request: Request, data: URLEncodedBody[FormMultiDict]
-    ) -> Response:
+    async def disable(self, request: Request, data: URLEncodedBody[FormMultiDict]) -> Response:
         """禁用固定文件模板 (index/tags): 文件 → 文件.bak, 前台回退内置模板。"""
         kind, name = data.get("kind"), data.get("name")
         if kind not in FIXED_KINDS or name not in FIXED_KINDS[kind]:
@@ -259,9 +248,7 @@ class TemplateController(HTMXMixin, Controller):
         )
 
     @post("enable", name="templates:enable", guards=[write_permission])
-    async def enable(
-        self, request: Request, data: URLEncodedBody[FormMultiDict]
-    ) -> Response:
+    async def enable(self, request: Request, data: URLEncodedBody[FormMultiDict]) -> Response:
         """启用固定文件模板 (index/tags): 文件.bak → 文件, 前台恢复自定义模板。
 
         若原件已存在(禁用期间编辑保存过, 内容比 .bak 新): 新内容优先, 丢旧备份。
@@ -274,9 +261,7 @@ class TemplateController(HTMXMixin, Controller):
         bak = root / f"{name}.bak"
         if bak.exists():
             if tpl.exists():
-                await sync_to_thread(
-                    bak.unlink
-                )  # 禁用期间保存过新内容(原件重建): 不覆盖, 丢旧备份
+                await sync_to_thread(bak.unlink)  # 禁用期间保存过新内容(原件重建): 不覆盖, 丢旧备份
             else:
                 await sync_to_thread(bak.rename, tpl)
         elif not tpl.exists():

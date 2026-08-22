@@ -15,7 +15,7 @@ from sqlalchemy.orm import defer, selectinload
 from application.accounts.models import User
 from application.articles.forms import ArticleDestroyForm, ArticleEditForm, ArticleForm
 from application.articles.models import Article
-from application.articles.schemas import ArticleSchema
+from application.articles.schemas import ArticleLiteSchema
 from application.articles.services import ArticleService
 from application.config import cfg
 from application.guards import PermissionGuard
@@ -68,7 +68,7 @@ class ArticleController(HTMXMixin, Controller):
                 selectinload(Article.creator),
                 defer(Article.text),
             ],
-            schema_type=ArticleSchema,
+            schema_type=ArticleLiteSchema,
         )
         # 面包屑: 全量栏目缓存取一次, 模板里 breadcrumbs(row.category_id) 直接解析
         categories = await get_categories_cached(service.repository.session)
