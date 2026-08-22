@@ -4,6 +4,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
+from urllib.parse import urljoin
 from uuid import uuid7
 
 from alibabacloud_oss_v2 import Config as OSSConfig
@@ -77,12 +78,14 @@ class OSSStorage:
         self.bucket = bucket
         self.prefix = prefix.strip("/")
         self.cdn_url = cdn_url.rstrip("/")
+        self.bucket_url = f"https://{bucket}.{region}.aliyuncs.com"
 
     async def save(self, content: bytes) -> str:
         key = _generate_key(_detect_ext(content))
         full_key = f"{self.prefix}/{key}" if self.prefix else key
         await self.client.put_object(OSSPutObjectRequest(bucket=self.bucket, key=full_key, body=content))
-        return f"{self.cdn_url}/{full_key}"
+        base = self.cdn_url or self.bucket_url
+        return urljoin(base, full_key)
 
 
 @lru_cache
