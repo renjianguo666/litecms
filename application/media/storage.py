@@ -8,6 +8,7 @@ from urllib.parse import urljoin
 from uuid import uuid7
 
 from alibabacloud_oss_v2 import Config as OSSConfig
+from alibabacloud_oss_v2 import GetBucketInfoRequest as OSSGetBucketInfoRequest
 from alibabacloud_oss_v2 import PutObjectRequest as OSSPutObjectRequest
 from alibabacloud_oss_v2.aio import AsyncClient as OSSAsyncClient
 from alibabacloud_oss_v2.credentials import (
@@ -78,14 +79,25 @@ class OSSStorage:
         self.bucket = bucket
         self.prefix = prefix.strip("/")
         self.cdn_url = cdn_url.rstrip("/")
-        self.bucket_url = f"https://{bucket}.{region}.aliyuncs.com"
+        # 未配 CDN 时兜底的 bucket 公网域名(懒加载缓存, 官方 extranet_endpoint)
+        self._bucket_url: str | None = None
+
+    async def get_bucket_url(self) -> str:
+        """获取 bucket 公网域名(浏览器可访问), 官方 extranet_endpoint, 首次调用缓存。"""
+        if self._bucket_url is None:
+            resp = await self.client.get_bucket_info(OSSGetBucketInfoRequest(bucket=self.bucket))
+            bucket_info = resp.bucket_info
+            if bucket_info is None:
+                raise RuntimeError(f"GetBucketInfo 未返回 bucket 信息: {self.bucket}")
+            self._bucket_url = f"https://{bucket_info.extranet_endpoint}"
+        return self._bucket_url
 
     async def save(self, content: bytes) -> str:
         key = _generate_key(_detect_ext(content))
         full_key = f"{self.prefix}/{key}" if self.prefix else key
         await self.client.put_object(OSSPutObjectRequest(bucket=self.bucket, key=full_key, body=content))
-        base = self.cdn_url or self.bucket_url
-        return urljoin(base, full_key)
+        # 配了 CDN 用 CDN; 未配回退 bucket 公网域名(官方 extranet_endpoint)
+        return urljoin(self.cdn_url or await self.get_bucket_url(), full_key)
 
 
 @lru_cache
