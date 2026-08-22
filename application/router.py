@@ -25,7 +25,7 @@ from application.web.controllers import WebController
 
 route_handlers = [
     Router(
-        path="/admin",
+        path=cfg.admin_url_prefix,
         include_in_schema=False,
         route_handlers=[
             AuthController,

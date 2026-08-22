@@ -31,6 +31,10 @@ class Config(Struct, rename="upper", dict=True):
     # === 应用基础 ===
     debug: bool = False
 
+    # 后台管理路由前缀(URL 前缀, 非文件系统路径): 想换后台入口时在 .env 设
+    # ADMIN_URL_PREFIX=/manage 等任意值, 改后需重启生效。
+    admin_url_prefix: str = "/admin"
+
     # session cookie 的 Secure 标志(可选加固): 默认 False=HTTP/HTTPS 都能登录, 安装即用。
     # 纯 HTTPS 部署想启用加固(仅 HTTPS 携带 cookie)时, .env 设 SESSION_COOKIE_SECURE=true。
     session_cookie_secure: bool = False

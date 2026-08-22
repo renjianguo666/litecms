@@ -9,6 +9,7 @@ from litestar.response import Redirect, Template
 
 from application.accounts.forms import LoginForm
 from application.accounts.services import UserService
+from application.config import cfg
 from application.htmx import ClientRedirect, HTMXMixin, HTMXRequest
 from application.security import login_action, logout_action
 
@@ -59,5 +60,5 @@ class AuthController(HTMXMixin, Controller):
     async def logout(self, request: Request) -> ClientRedirect | Redirect:
         logout_action(request)
         if isinstance(request, HTMXRequest) and request.htmx:
-            return self.htmx_redirect("/admin/login")
-        return Redirect("/admin/login")
+            return self.htmx_redirect(f"{cfg.admin_url_prefix}/login")
+        return Redirect(f"{cfg.admin_url_prefix}/login")
