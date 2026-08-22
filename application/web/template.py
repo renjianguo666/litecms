@@ -46,7 +46,8 @@ template_engine.engine.globals["category_select"] = helpers.category_select
 template_engine.engine.globals["tag_select"] = helpers.tag_select
 template_engine.engine.globals["special_select"] = helpers.special_select
 template_engine.engine.globals["article_select"] = helpers.article_select
-template_engine.engine.globals["wechat_share"] = helpers.wechat_share
+# 参见 ./wechat.py
+# template_engine.engine.globals["wechat_share"] = helpers.wechat_share
 
 
 class Template(Response[bytes]):

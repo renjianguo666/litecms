@@ -1,5 +1,21 @@
 """微信公众号 JS-SDK 分享封装。
 
+// ====================================================================
+
+最新记录。发现html标签中用
+
+    <meta property="og:site_name" content="{{ site_name }}" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="{{ title }}" />
+    <meta property="og:description" content="{{ description }}" />
+    <meta property="og:url" content="{{ url }}" />
+    <meta property="og:image" content="{{ image_url }}" />
+
+即可实现wechat功能。。 所以此文件保留 单不在使用
+
+========================================================================//
+
+
 模板里 {{ wechat_share(title="标题", desc="描述", img="图URL") | safe }}
 渲染一段 <script>: wx.config + wx.ready 注入分享配置。
 

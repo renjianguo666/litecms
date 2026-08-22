@@ -43,7 +43,8 @@ from .schemas import (
     SpecialSchema,
     TagSchema,
 )
-from .wechat import WeChatShare
+
+# from .wechat import WeChatShare
 
 
 def _session_by_request(request: Any) -> AsyncSession:
@@ -245,24 +246,24 @@ async def article_select(
 
 
 # =========================================================
-# 微信分享
+# 微信分享   参见  ./wechat.py
 # =========================================================
-@pass_context
-async def wechat_share(
-    ctx,
-    title: str = "",
-    desc: str = "",
-    link: str = "",
-    img: str = "",
-    *api_list: str,
-) -> str:
-    """渲染微信 JS-SDK 分享 JS, 供模板 | safe 直出。
+# @pass_context
+# async def wechat_share(
+#     ctx,
+#     title: str = "",
+#     desc: str = "",
+#     link: str = "",
+#     img: str = "",
+#     *api_list: str,
+# ) -> str:
+#     """渲染微信 JS-SDK 分享 JS, 供模板 | safe 直出。
 
-    凭据 (wechat_app_id / wechat_app_secret) 从 .env 读 (cfg), 属部署级配置;
-    未配置时返回空串, 不注入 JS。签名 URL 用当前 request.url。
+#     凭据 (wechat_app_id / wechat_app_secret) 从 .env 读 (cfg), 属部署级配置;
+#     未配置时返回空串, 不注入 JS。签名 URL 用当前 request.url。
 
-    access_token / jsapi_ticket 进程级缓存, 用 aiohttp 异步获取,
-    不阻塞事件循环。
-    """
-    share = WeChatShare(ctx["request"], *api_list)
-    return await share(title=title, desc=desc, link=link, img=img)
+#     access_token / jsapi_ticket 进程级缓存, 用 aiohttp 异步获取,
+#     不阻塞事件循环。
+#     """
+#     share = WeChatShare(ctx["request"], *api_list)
+#     return await share(title=title, desc=desc, link=link, img=img)
