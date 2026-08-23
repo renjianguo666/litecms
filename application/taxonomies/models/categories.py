@@ -78,7 +78,7 @@ class Category(UUIDv7AuditBase):
     @property
     def url(self) -> str:
         if self.domain:
-            return "/".join(self.path.split("/")[2:])
+            return "/" + "/".join(self.path.split("/")[2:])
         return self.path
 
     @property
