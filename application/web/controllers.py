@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 from advanced_alchemy.extensions.litestar.providers import create_service_provider
 from litestar import Controller, Request, Response, get, params
+from litestar.params import QueryParameter
 from litestar.status_codes import HTTP_404_NOT_FOUND
 from msgspec import convert
 from sqlalchemy import select, update
@@ -72,7 +75,7 @@ class WebController(Controller):
         slug: str,
         tag_service: TagService,
         article_service: ArticleService,
-        page: params.FromQuery[int] = 1,
+        page: Annotated[int, QueryParameter(ge=1, le=20)] = 1,  # 前台分页页数封顶 1..20
         page_size: params.FromQuery[int] = 20,
     ) -> Template:
         tag = await tag_service.get_one(slug=slug)
@@ -99,7 +102,7 @@ class WebController(Controller):
         slug: str,
         special_service: SpecialService,
         article_service: ArticleService,
-        page: params.FromQuery[int] = 1,
+        page: Annotated[int, QueryParameter(ge=1, le=20)] = 1,  # 前台分页页数封顶 1..20
         page_size: params.FromQuery[int] = 20,
     ) -> Template:
         special = await special_service.get_one(slug=slug, is_active=True)
@@ -181,9 +184,15 @@ class WebController(Controller):
         else:
             filters.append(Article.category_id == category.id)
 
+        # 前台分页页数封顶 20: 防深分页 O(N) OFFSET 拖慢事件循环 + 防垃圾 page 值 500
+        try:
+            page = min(max(1, int(request.query_params.get("page", 1))), 20)
+        except (TypeError, ValueError):
+            page = 1
+
         pagination = await article_service.paginate(
             *filters,
-            page=max(1, int(request.query_params.get("page", 1))),
+            page=page,
             page_size=category.page_size or 20,
             order_by=[("published_at", False)],
             schema_type=ArticleLiteSchema,

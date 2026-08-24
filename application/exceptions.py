@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import traceback
 from collections.abc import MutableMapping
+from pathlib import Path
 
 from advanced_alchemy.exceptions import DuplicateKeyError, NotFoundError
 from jinja2.exceptions import TemplateError
@@ -27,6 +28,7 @@ from litestar.status_codes import (
 from litestar.types import ExceptionHandler
 
 from application.checks import PathConflictError
+from application.config import cfg
 
 
 def _get_template_dev_mode() -> bool:
@@ -82,45 +84,6 @@ def internal_error_handler(request: Request, exc: Exception) -> Template | Respo
     )
 
 
-def template_error_location(exc: Exception) -> str:
-    """提取"模板文件:行号"用于管理员详情页。
-
-    TemplateSyntaxError/TemplateRuntimeError 自带 filename/lineno(含 include
-    引入的文件, filename 指向真正坏的那个); UndefinedError 等运行时错误无
-    filename, 从 traceback 帧里找模板帧兜底(endswith 精确匹配模板后缀,
-    不误判含 templates 的 Python 包路径)。非模板异常返回空串。
-    """
-    filename = getattr(exc, "filename", None)
-    if filename:
-        lineno = getattr(exc, "lineno", None)
-        return f"{filename}:{lineno}" if lineno else str(filename)
-    tb = exc.__traceback__
-    if tb is not None:
-        for frame in traceback.extract_tb(tb):
-            if str(frame.filename).endswith((".html", ".html.j2")):
-                return f"{frame.filename}:{frame.lineno}"
-    return ""
-
-
-def _error_snippet(location: str) -> str:
-    """从"文件:行号"读取该行源码, 作为代码片段展示; 读不到就空。"""
-    if not location:
-        return ""
-    path_part, _, line_part = location.rpartition(":")
-    if not line_part.isdigit():
-        return ""
-    try:
-        with open(path_part, encoding="utf-8") as f:
-            lines = f.read().splitlines()
-    except OSError:
-        return ""
-    n = int(line_part)
-    if not (1 <= n <= len(lines)):
-        return ""
-    code = html.escape(lines[n - 1].strip())
-    return f'<div class="snippet"><span style="color:#78716c">{n}</span>  {code}</div>'
-
-
 def method_not_allowed_handler(request: Request, exc: Exception) -> Template:
     # 单独处理, 不落入 Exception 兜底: 扫描器常用 HEAD 探测路径,
     # 405 若走 internal_error_handler 会打 traceback 刷日志。
@@ -149,6 +112,71 @@ exception_handler: ExceptionConfig = {
     InternalServerException: internal_error_handler,
     Exception: internal_error_handler,
 }
+
+
+# =========================================================
+# 模板错误详情页 (管理员可见, 独立 HTML, 不依赖模板引擎)
+# =========================================================
+
+
+def _display_path(filename: str) -> str:
+    """绝对路径转相对项目根, 避免向管理员页面泄露服务器路径。
+
+    /home/user/.../application/web/templates/x.html -> application/web/templates/x.html
+    不在项目根内的文件(如外部模板)保持原样, 不强行裁剪。
+    """
+    try:
+        return str(Path(filename).resolve().relative_to(cfg.root_dir))
+    except ValueError:
+        return filename
+
+
+def template_error_location(exc: Exception) -> str:
+    """提取"模板文件:行号"用于管理员详情页。
+
+    TemplateSyntaxError/TemplateRuntimeError 自带 filename/lineno(含 include
+    引入的文件, filename 指向真正坏的那个); UndefinedError 等运行时错误无
+    filename, 从 traceback 帧里找模板帧兜底(endswith 精确匹配模板后缀,
+    不误判含 templates 的 Python 包路径)。非模板异常返回空串。
+    返回相对项目根的路径, 不泄露服务器绝对路径。
+    """
+    filename = getattr(exc, "filename", None)
+    if filename:
+        lineno = getattr(exc, "lineno", None)
+        loc = f"{filename}:{lineno}" if lineno else str(filename)
+        return _display_path(loc)
+    tb = exc.__traceback__
+    if tb is not None:
+        for frame in traceback.extract_tb(tb):
+            if str(frame.filename).endswith((".html", ".html.j2")):
+                return _display_path(f"{frame.filename}:{frame.lineno}")
+    return ""
+
+
+def _error_snippet(location: str) -> str:
+    """从"文件:行号"读取该行源码, 作为代码片段展示; 读不到就空。
+
+    location 是相对项目根的展示路径(见 template_error_location), 读文件时
+    拼回项目根; 绝对路径(项目外文件)则直接用。
+    """
+    if not location:
+        return ""
+    path_part, _, line_part = location.rpartition(":")
+    if not line_part.isdigit():
+        return ""
+    path = Path(path_part)
+    if not path.is_absolute():
+        path = cfg.root_dir / path
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return ""
+    n = int(line_part)
+    if not (1 <= n <= len(lines)):
+        return ""
+    code = html.escape(lines[n - 1].strip())
+    return f'<div class="snippet"><span style="color:#78716c">{n}</span>  {code}</div>'
 
 
 _TEMPLATE_ERROR_CSS = (

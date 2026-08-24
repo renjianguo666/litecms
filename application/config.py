@@ -44,6 +44,9 @@ class Config(Struct, rename="upper", dict=True):
     storage_dir: Path = BASE_DIR / "storages"
     public_dir: Path = BASE_DIR / "public"
 
+    tag_url_prefix: str = "t"
+    special_url_prefix: str = "s"
+
     # === 请求体大小限制（Litestar 框架层拦截，所有 POST/PUT/PATCH 统一生效） ===
     request_max_body_size: int = 10 * 1024 * 1024  # 10MB
 
@@ -113,16 +116,15 @@ class Config(Struct, rename="upper", dict=True):
 
     @property
     def response_cache_config(self) -> ResponseCacheConfig:
-        # 只缓存无查询参数的请求: ?page=N 等翻页变体一律不缓存,
-        # 避免每个唯一 URL(含 query)都落盘成缓存文件, 也无串页风险。
+        # 含 query 的请求也缓存: 默认缓存 key 含排序后的 query(?page=N 不同 key 不串页),
+        # 404/400 由 default_do_cache_predicate 自动排除(只缓存 2xx/301/308)。
         return ResponseCacheConfig(
             store="response",
-            # 带查询参数(?page=N 等翻页变体)不缓存: 不落盘、不串页, 只缓存无参 path。
+            default_expiration=300,  # 前台缓存 60s → 300s: 爬虫重复请求命中率↑
             # 状态码沿用默认规则: 缓存 2xx 及 301/308 永久重定向。
             cache_response_filter=(
                 lambda scope, status_code: (
-                    not scope.get("query_string")
-                    and default_do_cache_predicate(scope, status_code)
+                    default_do_cache_predicate(scope, status_code)
                     # 模板开发者模式开启时前台一律不缓存: 改模板即时生效, 不用重启
                     and not _template_dev_mode()
                 )

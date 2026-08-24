@@ -31,6 +31,7 @@ from application.articles.services import ArticleService
 from application.contents.enums import PublishStatus
 from application.database import sqlalchemy_config
 from application.taxonomies.cache import get_categories_cached
+from application.taxonomies.hierarchy import build_tree
 from application.taxonomies.models import Category, Feature, Special
 from application.taxonomies.schemas import CategorySchema
 from application.taxonomies.services import (
@@ -45,6 +46,41 @@ from .schemas import (
 )
 
 # from .wechat import WeChatShare
+
+
+def _coerce_uuid(value: Any) -> UUID:
+    """把模板传来的 UUID 或 str (含列表里的元素) 统一成 UUID。
+
+    Jinja 里写字符串 id (如 "019b590f-...") 直接落到 Python 是 str,
+    与模型的 UUID 属性直接比较永远不相等, 必须显式转换。
+    """
+    return value if isinstance(value, UUID) else UUID(str(value))
+
+
+def _tree_sort_flat(
+    categories: list[CategorySchema],
+    order_by: str,
+    order_dir: Literal["asc", "desc"],
+) -> list[CategorySchema]:
+    """树感知排序: 父永远在子前, 只对同级兄弟按 order_by 排序, 并列保留 trail 序。
+
+    用 build_tree 把平铺列表还原成树, 每层对兄弟排序后再前序重铺成平铺列表。
+    修复全局 sorted 的坑: 子栏目优先级高于父时会跳出父前面破坏树序;
+    本函数保证 priority 怎么排都保持在各自的 trail 树内。
+    """
+    tree = build_tree(categories)
+
+    def _flatten(nodes: list[CategorySchema]) -> list[CategorySchema]:
+        ordered = sorted(
+            nodes, key=lambda n: getattr(n, order_by), reverse=order_dir == "desc"
+        )
+        flat: list[CategorySchema] = []
+        for node in ordered:
+            flat.append(node)
+            flat.extend(_flatten(node.children))
+        return flat
+
+    return _flatten(tree)
 
 
 def _session_by_request(request: Any) -> AsyncSession:
@@ -64,21 +100,31 @@ def _session_by_request(request: Any) -> AsyncSession:
 @pass_context
 async def category_select(
     ctx,
-    *item: UUID,
-    parent: UUID | None = None,
-    under: UUID | None = None,
+    *item: str | UUID,
+    parent: str | UUID | None = None,  # 默认 None = 不过滤 = 全部
+    under: str | UUID | None = None,
     order_by: str | None = None,
     order_dir: Literal["asc", "desc"] = "asc",
 ) -> list[CategorySchema]:
     """取栏目 (帝国 CMS 式, 走文件缓存, 内存过滤, 零 SQL)。
 
-    四种取法互斥, 优先级 under > parent > 位置参数(按 id 取) > 无参(顶级), 每次缓存内存过滤, 不查库。
-    参数统一传栏目 id (UUID), 返回 list[CategorySchema]。
+    取法互斥, 优先级 under > parent > 位置参数(按 id 取) > 无参(全部), 每次缓存内存过滤, 不查库。
+    参数统一传栏目 id (UUID 或 UUID 字符串), 返回 list[CategorySchema] (一维平铺)。
 
-    位置参数 *item: 按 id 取栏目本身, 支持零到多个, 也支持单个 id 列表:
-        category_select(id1, id2, id3)      # 取 3 个指定栏目
-        category_select([id1, id2, id3])    # 等价写法
-    parent: 取某栏目的直接子栏目 (parent_id == 该 id), 一层;
+    无任何参数 = 全部栏目 (一维平铺, 树前序: 父在前子在后, 含所有层级):
+        {% for c in category_select() %}
+          {{ c.name }} ({{ c.trail }})
+        {% endfor %}
+        {# 只要顶级栏目 (帝国式): 模板里直接过滤 parent_id 为空 #}
+        {% for c in category_select() if c.parent_id is none %}
+
+    位置参数 *item: 按 id 取栏目本身, 支持零到多个, 也支持单个 id 列表
+    (元素可为 UUID 对象或字符串):
+        category_select(id1, id2, id3)            # 取 3 个指定栏目
+        category_select("019b590f-2e55-...")      # 字符串 id 也可直接用
+        category_select([id1, id2, id3])          # 等价写法
+    parent: 取某栏目的直接子栏目 (parent_id == 该 id), 一层; None (默认) = 不过滤;
+        顶级栏目在模板里过滤: {% for c in category_select() if c.parent_id is none %}
     under: 取某栏目下面的所有子栏目 (任意层级, 含子/孙/曾孙..., 不含自身),
         trail 前缀匹配, 按树前序平铺, 口径与 category_view 分页一致。
         聚合该栏目下所有文章时:
@@ -86,40 +132,43 @@ async def category_select(
             {% for item in article_select(category=cids, limit=4, cover=True) %}
     order_by: 排序字段 (Schema 属性名, 如 "priority" / "id");
         None (默认) = 维持缓存 trail 序 (树前序); under 模式忽略此参数;
+        树感知排序: 只对同级兄弟排序, 父永远在子前 (子优先级高于父也不会破坏树序);
     order_dir: 排序方向 (asc 升序, desc 降序; priority 常用 desc, 值大在前)。
 
-    无任何参数 = 顶级栏目 (等价 category_select(parent=None)):
-        {% for c in category_select(order_by="priority", order_dir="desc") %}
+    树形导航用嵌套实现层级: 顶级 (模板过滤) 里再 category_select(parent=c.id)
+    取直接子级, 逐层往下:
+        {% for c in category_select() if c.parent_id is none %}
           {{ c.name }}
-          {% for sub in category_select(parent=c.id, order_by="priority", order_dir="desc") %}
-            {% for sub2 in category_select(parent=sub.id) %}{% endfor %}
-          {% endfor %}
+          {% for sub in category_select(parent=c.id) %}{% endfor %}
         {% endfor %}
     """
     session = _session_by_request(ctx["request"])
     cats = await get_categories_cached(session)
 
     if under is not None:
-        node = next((c for c in cats if c.id == under), None)
+        node = next((c for c in cats if c.id == _coerce_uuid(under)), None)
         if node is None:
             return []
         return [c for c in cats if c.trail.startswith(f"{node.trail}.")]
 
     if parent is not None:
-        result = [c for c in cats if c.parent_id == parent]
+        parent_uuid = _coerce_uuid(parent)
+        result = [c for c in cats if c.parent_id == parent_uuid]  # 直接子级
     elif item:
         wanted: set[UUID] = set()
         for x in item:
             if isinstance(x, (list, tuple)):
-                wanted.update(x)
+                wanted.update(_coerce_uuid(v) for v in x)
             else:
-                wanted.add(x)
+                wanted.add(_coerce_uuid(x))
         result = [c for c in cats if c.id in wanted]
     else:
-        result = [c for c in cats if c.parent_id is None]
+        result = list(cats)  # 全部栏目 (一维平铺, 树前序, 含所有层级)
 
     if order_by is not None:
-        result = sorted(result, key=lambda c: getattr(c, order_by), reverse=order_dir == "desc")
+        # 树感知排序: 只对同级兄弟按 order_by 排, 父永远在子前。
+        # 修复全局 sorted 的坑: 子优先级高于父也不会跳出父前面。
+        result = _tree_sort_flat(result, order_by, order_dir)
 
     return result
 
@@ -185,7 +234,7 @@ async def special_select(
 @pass_context
 async def article_select(
     ctx,
-    category: UUID | list[UUID] | None = None,
+    category: str | UUID | list[str | UUID] | None = None,
     special: str | list[str] | None = None,
     feature: str | list[str] | None = None,
     limit: int = 10,

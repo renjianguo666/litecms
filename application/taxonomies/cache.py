@@ -38,7 +38,7 @@ async def get_categories_cached(session: AsyncSession) -> list[CategorySchema]:
         return msgspec.msgpack.decode(raw, type=list[CategorySchema])
 
     data = convert(
-        await CategoryService(session=session).get_many(order_by=[("priority", True)]),
+        await CategoryService(session=session).get_many(order_by=[("trail", False)]),
         list[CategorySchema],
         from_attributes=True,
     )

@@ -34,7 +34,7 @@
             {# 移动端下拉菜单：包含全部项目 #}
             <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-1 p-2 shadow bg-base-100 rounded-box w-52">
               <li class="{% if request.url.path == '/' %}menu-active{% endif %}"><a href="/">首页</a></li>
-              {% for c in category_select() %}
+              {% for c in category_select() if c.parent_id is none %}
                 {% set subs = category_select(parent=c.id) %}
                 {% if subs %}
                   <li class="{% if request.url.path.startswith(c.url) %}menu-active{% endif %}">
@@ -63,7 +63,7 @@
         {# navbar-end: 其他分类菜单，靠右排列 #}
         <div class="navbar-end hidden lg:flex">
           <ul class="menu menu-horizontal px-1">
-            {% for c in category_select() %}
+            {% for c in category_select() if c.parent_id is none %}
               {% set subs = category_select(parent=c.id) %}
               {% if subs %}
                 <li class="{% if request.url.path.startswith(c.url) %}menu-active{% endif %}">
