@@ -28,6 +28,10 @@ class ContentLiteSchema(Schema):
     views: int
     published_at: datetime
     created_at: datetime
+    updated_at: datetime
+    path: str
+    status: PublishStatus
+    category_id: UUID
     category: CategoryLiteSchema
     creator: UserLiteSchema
 
@@ -35,10 +39,6 @@ class ContentLiteSchema(Schema):
 class ContentSchema(ContentLiteSchema):
     """内容完整展示（详情用, 补管理字段与多对多集合, 查询时需 load 全部）。"""
 
-    path: str
-    status: PublishStatus
-    updated_at: datetime
-    category_id: UUID
     tags: list[TagSchema]
     specials: list[SpecialSchema]
     features: list[FeatureSchema]

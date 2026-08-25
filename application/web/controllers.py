@@ -4,8 +4,9 @@ from typing import Annotated
 
 from advanced_alchemy.extensions.litestar.providers import create_service_provider
 from litestar import Controller, Request, Response, get, params
+from litestar.exceptions import ValidationException
 from litestar.params import QueryParameter
-from litestar.status_codes import HTTP_404_NOT_FOUND
+from litestar.status_codes import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from msgspec import convert
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,7 @@ from application.articles.models import Article
 from application.articles.services import ArticleService
 from application.contents.enums import PublishStatus
 from application.contents.models import Content
+from application.mixins import Pagination
 from application.pages.services import PageService
 from application.seo.hooks import before_request_sitemap_handler
 from application.taxonomies.cache import get_categories_cached
@@ -48,6 +50,28 @@ async def get_breadcrumbs(db_session: AsyncSession, trail: str) -> list[Category
         list[CategoryLiteSchema],
         from_attributes=True,
     )
+
+
+class CappedPagination(Pagination):
+    """前台分页包装: 仅覆盖 pages 使总页数封顶 max_pages (默认 20)。
+
+    has_next/next_num/iter_pages 均由 pages 派生, 覆盖后自动同步,
+    与 QueryParameter(ge=1, le=20) 的参数封顶一致, 不再渲染/导航到 400 页。
+    total 保持真实值 ("共 X 条/篇" 不受影响)。
+    """
+
+    def __init__(self, pagination: Pagination, max_pages: int = 20):
+        super().__init__(
+            items=pagination.items,
+            total=pagination.total,
+            page_size=pagination.page_size,
+            page=pagination.page,
+        )
+        self.max_pages = max_pages
+
+    @property
+    def pages(self) -> int:
+        return min(super().pages, self.max_pages)
 
 
 class WebController(Controller):
@@ -84,10 +108,11 @@ class WebController(Controller):
             Article.status == PublishStatus.PUBLISHED,
             page=page,
             page_size=page_size,
-            order_by=[("published_at", False)],
+            order_by=[("published_at", True)],
             schema_type=ArticleLiteSchema,
             load=[selectinload(Article.category), selectinload(Article.creator), defer(Article.text)],
         )
+        pagination = CappedPagination(pagination)
         return Template(
             ["tags/show.html", "web_tag.html"],
             context={
@@ -112,10 +137,11 @@ class WebController(Controller):
             Article.status == PublishStatus.PUBLISHED,
             page=page,
             page_size=page_size,
-            order_by=[("published_at", False)],
+            order_by=[("published_at", True)],
             schema_type=ArticleLiteSchema,
             load=[selectinload(Article.category), selectinload(Article.creator), defer(Article.text)],
         )
+        pagination = CappedPagination(pagination)
 
         return Template(
             [f"specials/{special.template}", "web_special.html"],
@@ -185,19 +211,29 @@ class WebController(Controller):
             filters.append(Article.category_id == category.id)
 
         # 前台分页页数封顶 20: 防深分页 O(N) OFFSET 拖慢事件循环 + 防垃圾 page 值 500
+        # 超出 1..20 直接 400, 不做静默截断 (与 tag/special 视图 QueryParameter 校验行为一致)
         try:
-            page = min(max(1, int(request.query_params.get("page", 1))), 20)
+            page = int(request.query_params.get("page", 1))
         except (TypeError, ValueError):
             page = 1
+
+        if page < 1 or page > 20:
+            # 与 QueryParameter(ge=1, le=20) 校验失败同源: 抛 ValidationException,
+            # 走全局 bad_request_handler -> errors/400.html.j2, 无需自定义模板
+            raise ValidationException(
+                detail="page 参数超出有效范围 1..20",
+                status_code=HTTP_400_BAD_REQUEST,
+            )
 
         pagination = await article_service.paginate(
             *filters,
             page=page,
             page_size=category.page_size or 20,
-            order_by=[("published_at", False)],
+            order_by=[("published_at", True)],
             schema_type=ArticleLiteSchema,
             load=[selectinload(Article.category), selectinload(Article.creator), defer(Article.text)],
         )
+        pagination = CappedPagination(pagination)
 
         template = ["web_category_index.html" if category.children else "web_category.html"]
         if category.template:
