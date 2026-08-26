@@ -49,12 +49,20 @@ def create_structlog_config() -> StructlogConfig:
         LOG_LEVEL = logging.DEBUG
         ASGI_ERROR_LEVEL = logging.DEBUG
         ASGI_ACCESS_LEVEL = logging.INFO
-        SQLALCHEMY_LEVEL = logging.DEBUG
+        # INFO 保留 SQL 语句文本 (SELECT/INSERT...);
+        # 不设 DEBUG: 否则每条 dbapi 操作都打 executing/operation completed
+        # 连 PRAGMA foreign_keys 等建连内部语句都刷屏
+        SQLALCHEMY_LEVEL = logging.INFO
     else:
         LOG_LEVEL = logging.WARNING
         ASGI_ERROR_LEVEL = logging.WARNING
         ASGI_ACCESS_LEVEL = logging.WARNING
         SQLALCHEMY_LEVEL = logging.WARNING
+
+    # aiosqlite 驱动自身的 DEBUG 日志: 每条底层调用都刷 executing/completed 两行,
+    # 且会冒泡到 DEBUG 的 root, 是 SQL 刷屏的主要来源; 与 sqlalchemy.engine 的
+    # SQL 语句日志无关, 直接抬到 WARNING 关掉 (本驱动无 INFO 级日志可保留)
+    AIOSQLITE_LEVEL = logging.WARNING
 
     REQUEST_FIELDS: list[
         Literal["path", "method", "query", "path_params"]
@@ -102,6 +110,11 @@ def create_structlog_config() -> StructlogConfig:
                     "sqlalchemy.pool": {
                         "propagate": False,
                         "level": logging.getLevelName(SQLALCHEMY_LEVEL),
+                        "handlers": ["queue_listener"],
+                    },
+                    "aiosqlite": {
+                        "propagate": False,
+                        "level": logging.getLevelName(AIOSQLITE_LEVEL),
                         "handlers": ["queue_listener"],
                     },
                 },

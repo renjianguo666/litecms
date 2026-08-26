@@ -27,7 +27,7 @@ def create_sqlalchemy_engine(config: Config) -> AsyncEngine:
         "future": True,
         "json_serializer": encode_json,
         "json_deserializer": decode_json,
-        # "echo": config.debug or config.database_echo,
+        "echo": config.database_echo,
     }
 
     scheme = urlparse(config.database_url).scheme or ""

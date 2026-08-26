@@ -152,10 +152,10 @@ class WebController(Controller):
         )
 
     @get("plugin/{plugin_name:str}", name="web:plugin", cache=True)
-    async def plugin_callback(self, request: Request, plugin_name: params.FromPath[str]) -> Response | Template:
+    async def plugin_callback(self, request: Request, plugin_name: params.FromPath[str]) -> Response:
         handler = plugin.get_handler(plugin_name)
         if handler is not None:
-            return handler(request)
+            return await handler(request)
         return Template(
             "web_404.html",
             status_code=HTTP_404_NOT_FOUND,
