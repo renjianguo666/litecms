@@ -18,7 +18,6 @@ from application.contents.enums import PublishStatus
 from application.contents.models import Content
 from application.mixins import Pagination
 from application.pages.services import PageService
-from application.seo.hooks import before_request_sitemap_handler
 from application.taxonomies.cache import get_categories_cached
 from application.taxonomies.hierarchy import resolve_breadcrumbs
 from application.taxonomies.models import Category
@@ -27,6 +26,7 @@ from application.taxonomies.services import (
     SpecialService,
     TagService,
 )
+from application.web.sitemap import before_request_sitemap_handler
 
 from . import urls
 from .plugin import plugin

@@ -32,12 +32,7 @@ if TYPE_CHECKING:
 
 template_engine = JinjaTemplateEngine.from_environment(
     Environment(
-        loader=FileSystemLoader(
-            searchpath=[
-                cfg.app_dir / "web/templates",
-                cfg.root_dir / "storages/templates",
-            ]
-        ),
+        loader=FileSystemLoader(searchpath=[cfg.app_dir / "web/templates", cfg.root_dir / "storages/templates"]),
         enable_async=True,
     )
 )
