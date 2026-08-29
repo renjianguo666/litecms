@@ -19,9 +19,7 @@ from application.contents.enums import PublishStatus
 
 
 class ArticleForm(Form):
-    categories = SelectMultipleField(
-        "发布栏目", validators=[validators.data_required(message="栏目必须")]
-    )
+    categories = SelectMultipleField("发布栏目", validators=[validators.data_required(message="栏目必须")])
     title = StringField(
         "标题",
         validators=[
@@ -31,9 +29,7 @@ class ArticleForm(Form):
         filters=[lambda v: (v or "").strip()],
         render_kw={"autocomplete": "off"},
     )
-    text = TextAreaField(
-        "内容", validators=[validators.DataRequired(message="内容不能为空")]
-    )
+    text = TextAreaField("内容", validators=[validators.DataRequired(message="内容不能为空")])
     description = TextAreaField(
         "描述",
         filters=[lambda v: (v or "").strip() or None],
@@ -94,8 +90,8 @@ class ArticleDestroyForm(Form):
     title = StringField("文章标题", render_kw={"readonly": ""})
     confirm = StringField(
         "删除确认",
-        validators=[
-            validators.AnyOf(["我确认删除"], message='请输入"我确认删除"以确认操作')
-        ],
+        validators=[validators.AnyOf(["我确认删除"], message='请输入"我确认删除"以确认操作')],
         render_kw={"placeholder": "我确认删除"},
     )
+
+    submit = SubmitField("确认删除")
