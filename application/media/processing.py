@@ -6,6 +6,8 @@ from litestar.concurrency import sync_to_thread
 from litestar.exceptions import ValidationException
 from PIL import Image
 
+from application.config import cfg
+
 # 解压炸弹防护: PNG 无 draft 降采样, img.thumbnail() 内部 img.load() 会全量解码,
 # ~89M 像素(默认 MAX_IMAGE_PIXELS)解码即吃 356MB 内存, 并发数个 OOM。
 # img.size 来自 PNG header(IHDR), 读取不触发全量解码, 可在 load()/thumbnail()
@@ -22,10 +24,11 @@ async def process_image(content: bytes) -> bytes:
 
 
 def optimize_image(content: bytes, quality: int = 82, max_side: int = 3000) -> bytes:
-    """图片优化: 动图原样返回, 静态图转 WebP。
+    """图片优化: 动图原样返回, 静态图缩小后转码。
 
     - 动图: 转码会丢动画, 原样返回
     - 静态图: 先按尺寸上限缩小, 再全量解码转换
+    - 输出格式: 默认 WebP; 兼容模式(image_compat_mode=true)保留原图格式
     """
     with Image.open(BytesIO(content)) as img:
         # 动图: 转码会丢动画, 原样返回
@@ -39,7 +42,12 @@ def optimize_image(content: bytes, quality: int = 82, max_side: int = 3000) -> b
         # 静态图: 先按尺寸上限缩小, 再全量解码转换
         if max(img.size) > max_side:
             img.thumbnail((max_side, max_side))
-        img = img.convert("RGBA") if img.mode in ("RGBA", "P") else img.convert("RGB")
+        # 输出格式: 默认 WebP; 兼容模式保留原图格式
+        out_format = img.format if cfg.image_compat_mode else "WEBP"
+        if out_format == "JPEG":
+            img = img.convert("RGB")   # JPEG 无透明通道
+        elif out_format == "WEBP":
+            img = img.convert("RGBA") if img.mode in ("RGBA", "P") else img.convert("RGB")
         output = BytesIO()
-        img.save(output, format="WEBP", quality=quality, optimize=True)
+        img.save(output, format=out_format, quality=quality, optimize=True)  # PNG/GIF 自动忽略 quality
         return output.getvalue()

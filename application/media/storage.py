@@ -24,7 +24,9 @@ class Storage(Protocol):
 
 
 def _detect_ext(content: bytes) -> str:
-    """从文件头推断格式(转码层产出 WebP/GIF/PNG)"""
+    """从文件头推断格式(转码层产出 WebP/GIF/JPEG/PNG)"""
+    if content.startswith(b"\xff\xd8\xff"):  # 兼容模式保留 JPG
+        return ".jpg"
     if content.startswith(b"RIFF") and content[8:12] == b"WEBP":
         return ".webp"
     if content.startswith((b"GIF87a", b"GIF89a")):

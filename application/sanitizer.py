@@ -16,64 +16,47 @@ import nh3
 # from bs4 import BeautifulSoup
 from selectolax.lexbor import LexborHTMLParser
 
-# === 允许的 HTML 标签 ===
-ALLOWED_TAGS = {
-    # 块级
-    "p",
-    "br",
-    "hr",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "blockquote",
-    "pre",
-    "code",
-    # 内联
-    "strong",
-    "em",
-    "u",
-    "s",
-    "del",
-    "sub",
-    "sup",
-    "mark",
-    "span",
-    "div",
-    # 列表
-    "ul",
-    "ol",
-    "li",
-    # 链接 & 图片
-    "a",
-    "img",
-    # 表格
-    "table",
-    "thead",
-    "tbody",
-    "tfoot",
-    "tr",
-    "th",
-    "td",
-    "caption",
-    "colgroup",
-    "col",
-    # 多媒体
-    "video",
-    "source",
-    "iframe",
-}
-
 # === 允许的属性（按标签分组） ===
+# 允许的标签 = 这个字典的 key（单一数据源，只维护一份）
+# 所有标签都放行 style；style 里能留哪些 CSS 属性由 filter_style_properties 把关
 ALLOWED_ATTRS: dict[str, set[str]] = {
-    "a": {"href", "title", "target", "rel"},
-    "img": {"src", "alt", "title", "width", "height", "loading"},
-    "td": {"colspan", "rowspan"},
-    "th": {"colspan", "rowspan", "scope"},
-    "col": {"span"},
-    "colgroup": {"span"},
+    "p": {"style"},
+    "div": {"style"},
+    "h1": {"style"},
+    "h2": {"style"},
+    "h3": {"style"},
+    "h4": {"style"},
+    "h5": {"style"},
+    "h6": {"style"},
+    "blockquote": {"style"},
+    "pre": {"style"},
+    "hr": {"style"},
+    "br": {"style"},
+    "strong": {"style"},
+    "em": {"style"},
+    "u": {"style"},
+    "s": {"style"},
+    "del": {"style"},
+    "sub": {"style"},
+    "sup": {"style"},
+    "mark": {"style"},
+    "span": {"style"},
+    "code": {"style"},
+    "ul": {"style"},
+    "ol": {"style"},
+    "li": {"style"},
+    "a": {"href", "title", "target", "rel", "style"},
+    "img": {"src", "alt", "title", "width", "height", "loading", "style"},
+    "table": {"style"},
+    "thead": {"style"},
+    "tbody": {"style"},
+    "tfoot": {"style"},
+    "tr": {"style"},
+    "th": {"colspan", "rowspan", "scope", "style"},
+    "td": {"colspan", "rowspan", "style"},
+    "caption": {"style"},
+    "colgroup": {"span", "style"},
+    "col": {"span", "style"},
     "video": {
         "src",
         "controls",
@@ -85,19 +68,14 @@ ALLOWED_ATTRS: dict[str, set[str]] = {
         "loop",
         "muted",
         "playsinline",
+        "style",
     },
-    "source": {"src", "type"},
-    "iframe": {
-        "src",
-        "width",
-        "height",
-        "frameborder",
-        "allowfullscreen",
-        "allow",
-        "title",
-        "referrerpolicy",
-    },
+    "source": {"src", "type", "style"},
+    "iframe": {"src", "width", "height", "frameborder", "allowfullscreen", "allow", "title", "referrerpolicy", "style"},
 }
+
+# 允许的标签 = 属性表的 key（不再单独维护一份标签名单）
+ALLOWED_TAGS: set[str] = set(ALLOWED_ATTRS)
 
 # === iframe src 域名白名单 ===
 # 国内 + 国外主流视频平台 embed 域名
@@ -157,6 +135,7 @@ def sanitize_html(html_text: str) -> str:
         html_text,
         tags=ALLOWED_TAGS,
         attributes=ALLOWED_ATTRS,
+        filter_style_properties={"text-align"},
         url_schemes={"http", "https", "mailto"},
         # ALLOWED_ATTRS 已显式允许 a[rel], 需关闭 nh3 默认的 link_rel 强制,
         # 否则 nh3>=0.3 对任何输入都抛 ValueError

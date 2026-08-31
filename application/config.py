@@ -58,6 +58,9 @@ class Config(Struct, rename="upper", dict=True):
     oss_prefix: str = "uploads"
     oss_use_internal: bool = False
     oss_cdn_url: str = ""
+    # 图片兼容模式: 默认 False=输出 WebP; True=保留原图格式。
+    # 用于文章复制发布到东方财富财富号等不支持 WebP 的第三方平台。env: IMAGE_COMPAT_MODE=true
+    image_compat_mode: bool = False
 
     # ===== 微信公众号配置 =====
     wechat_app_id: str = ""
