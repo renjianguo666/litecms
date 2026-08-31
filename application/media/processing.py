@@ -23,12 +23,13 @@ async def process_image(content: bytes) -> bytes:
         raise ValidationException(f"图片处理失败: {exc}") from exc
 
 
-def optimize_image(content: bytes, quality: int = 82, max_side: int = 3000) -> bytes:
+def optimize_image(content: bytes, max_side: int = 3000) -> bytes:
     """图片优化: 动图原样返回, 静态图缩小后转码。
 
     - 动图: 转码会丢动画, 原样返回
     - 静态图: 先按尺寸上限缩小, 再全量解码转换
-    - 输出格式: 默认 WebP; 兼容模式(image_compat_mode=true)保留原图格式
+    - 输出格式: 默认 WebP(q82); 兼容模式(image_compat_mode=true)保留原图格式,
+      JPG 用 q88 追平 WebP 82 的画质(WebP 编码效率高于 JPG)
     """
     with Image.open(BytesIO(content)) as img:
         # 动图: 转码会丢动画, 原样返回
@@ -49,5 +50,6 @@ def optimize_image(content: bytes, quality: int = 82, max_side: int = 3000) -> b
         elif out_format == "WEBP":
             img = img.convert("RGBA") if img.mode in ("RGBA", "P") else img.convert("RGB")
         output = BytesIO()
-        img.save(output, format=out_format, quality=quality, optimize=True)  # PNG/GIF 自动忽略 quality
+        # 质量: WebP=82(体积小); 兼容模式 JPG=88(追平 WebP82 画质), PNG/GIF 忽略该值
+        img.save(output, format=out_format, quality=88 if cfg.image_compat_mode else 82, optimize=True)
         return output.getvalue()
