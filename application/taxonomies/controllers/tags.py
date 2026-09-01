@@ -21,6 +21,7 @@ from application.taxonomies.forms import ContentIdsForm, TagDestroyForm, TagForm
 from application.taxonomies.models import Tag
 from application.taxonomies.schemas import TagSchema
 from application.taxonomies.services import TagService
+from application.web.cache import invalidate_by_references
 
 view_permission = PermissionGuard("tags:view", "查看标签", "标签管理")
 create_permission = PermissionGuard("tags:create", "创建标签", "标签管理")
@@ -48,9 +49,7 @@ class TagController(HTMXMixin, Controller):
     ) -> Template:
         filters = []
         if search:
-            filters.append(
-                SearchFilter(field_name="name", value=search, ignore_case=True)
-            )
+            filters.append(SearchFilter(field_name="name", value=search, ignore_case=True))
         pagination = await service.paginate(
             *filters,
             page=page,
@@ -93,7 +92,8 @@ class TagController(HTMXMixin, Controller):
     ) -> Response | Template:
         form = TagForm(formdata=data)
         if form.validate():
-            await service.create(form.data)
+            tag = await service.create(form.data)
+            await invalidate_by_references(tag)
             return self.htmx_success("添加成功", redirect=data.get("url"))
         return self.htmx_render(
             template_name="tag_form.html.j2",
@@ -109,7 +109,9 @@ class TagController(HTMXMixin, Controller):
     ) -> Response:
         form = TagForm(formdata=data)
         if form.validate():
-            await service.update(form.data, item_id)
+            tag = await service.update(form.data, item_id)
+            # 标签页第一页 + 首页 (标签改名/slug 影响所有带此标签的文章页链接, 由 TTL 自愈)
+            await invalidate_by_references(tag)
             return self.htmx_success("更新成功", redirect=data.get("url"))
         return self.htmx_render(
             template_name="tag_form.html.j2",
@@ -145,8 +147,10 @@ class TagController(HTMXMixin, Controller):
         service: TagService,
     ) -> Response:
         form = TagDestroyForm(formdata=data)
+        tag = await service.get(item_id)
         if form.validate():
             await service.delete(item_id)
+            await invalidate_by_references(tag)
             return self.htmx_success("删除成功")
         return self.htmx_render(
             template_name="tag_destroy.html.j2",
@@ -155,9 +159,7 @@ class TagController(HTMXMixin, Controller):
 
     # ============ 内容管理 ============
 
-    @get(
-        "{item_id:uuid}/manage", name="tags:manage_contents", guards=[update_permission]
-    )
+    @get("{item_id:uuid}/manage", name="tags:manage_contents", guards=[update_permission])
     async def manage_contents(
         self,
         item_id: FromPath[UUID],
@@ -200,9 +202,7 @@ class TagController(HTMXMixin, Controller):
         )
         filters = []
         if search:
-            filters.append(
-                SearchFilter(field_name="title", value=search, ignore_case=True)
-            )
+            filters.append(SearchFilter(field_name="title", value=search, ignore_case=True))
         pagination = await content_service.paginate(
             *filters,
             load=[Content.category, Content.creator],

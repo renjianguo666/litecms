@@ -21,13 +21,12 @@ from application.taxonomies.forms import ContentIdsForm, SpecialDestroyForm, Spe
 from application.taxonomies.models import Special
 from application.taxonomies.schemas import SpecialSchema
 from application.taxonomies.services import SpecialService
+from application.web.cache import invalidate_by_references
 
 view_permission = PermissionGuard("specials:view", "查看专题", "专题管理")
 create_permission = PermissionGuard("specials:create", "创建专题", "专题管理")
 update_permission = PermissionGuard("specials:update", "更新专题", "专题管理")
-destroy_permission = PermissionGuard(
-    "specials:destroy", "删除专题", "专题管理"
-)
+destroy_permission = PermissionGuard("specials:destroy", "删除专题", "专题管理")
 
 
 class SpecialController(HTMXMixin, Controller):
@@ -48,9 +47,7 @@ class SpecialController(HTMXMixin, Controller):
     ) -> Template:
         filters = []
         if search:
-            filters.append(
-                SearchFilter(field_name="name", value=search, ignore_case=True)
-            )
+            filters.append(SearchFilter(field_name="name", value=search, ignore_case=True))
 
         pagination = await service.paginate(
             *filters,
@@ -94,7 +91,8 @@ class SpecialController(HTMXMixin, Controller):
     ) -> Response | Template:
         form = SpecialForm(formdata=data)
         if form.validate():
-            await service.create(form.data)
+            special = await service.create(form.data)
+            await invalidate_by_references(special)
             return self.htmx_success("添加成功", redirect=data.get("url"))
         return self.htmx_render(
             template_name="special_form.html.j2",
@@ -110,7 +108,8 @@ class SpecialController(HTMXMixin, Controller):
     ) -> Response:
         form = SpecialForm(formdata=data)
         if form.validate():
-            await service.update(form.data, item_id)
+            special = await service.update(form.data, item_id)
+            await invalidate_by_references(special)
             return self.htmx_success("更新成功", redirect=data.get("url"))
 
         return self.htmx_render(
@@ -147,8 +146,10 @@ class SpecialController(HTMXMixin, Controller):
         service: SpecialService,
     ) -> Response:
         form = SpecialDestroyForm(formdata=data)
+        special = await service.get(item_id)
         if form.validate():
             await service.delete(item_id)
+            await invalidate_by_references(special)
             return self.htmx_success("删除成功")
         return self.htmx_render(
             template_name="special_destroy.html.j2",
@@ -170,14 +171,10 @@ class SpecialController(HTMXMixin, Controller):
         page: Annotated[int, QueryParameter(ge=1)] = 1,
         page_size: Annotated[int, QueryParameter(ge=1, le=100)] = 10,
     ) -> Template:
-        special = service.to_schema(
-            await service.get(item_id), schema_type=SpecialSchema
-        )
+        special = service.to_schema(await service.get(item_id), schema_type=SpecialSchema)
         pagination = await content_service.paginate(
             load=[Content.category, Content.creator],
-            statement=select(Content).where(
-                Content.specials.any(Special.id == item_id)
-            ),
+            statement=select(Content).where(Content.specials.any(Special.id == item_id)),
             page=page,
             page_size=page_size,
             schema_type=ContentLiteSchema,
@@ -201,18 +198,14 @@ class SpecialController(HTMXMixin, Controller):
         page: Annotated[int, QueryParameter(ge=1)] = 1,
         page_size: Annotated[int, QueryParameter(ge=1, le=100)] = 10,
     ) -> Template:
-        special = service.to_schema(
-            await service.get(item_id), schema_type=SpecialSchema
-        )
+        special = service.to_schema(await service.get(item_id), schema_type=SpecialSchema)
         statement = select(Content).where(
             Content.status == PublishStatus.PUBLISHED,
             ~Content.specials.any(Special.id == item_id),
         )
         filters = []
         if search:
-            filters.append(
-                SearchFilter(field_name="title", value=search, ignore_case=True)
-            )
+            filters.append(SearchFilter(field_name="title", value=search, ignore_case=True))
         pagination = await content_service.paginate(
             *filters,
             load=[Content.category, Content.creator],

@@ -21,6 +21,7 @@ from application.taxonomies.forms import ContentIdsForm, FeatureDestroyForm, Fea
 from application.taxonomies.models import Feature
 from application.taxonomies.schemas import FeatureSchema
 from application.taxonomies.services import FeatureService
+from application.web.cache import invalidate_by_references
 
 group = "推荐管理"
 view_permission = PermissionGuard("features:view", "查看推荐", group)
@@ -47,9 +48,7 @@ class FeatureController(HTMXMixin, Controller):
     ) -> Template:
         filters = []
         if search:
-            filters.append(
-                SearchFilter(field_name="name", value=search, ignore_case=True)
-            )
+            filters.append(SearchFilter(field_name="name", value=search, ignore_case=True))
 
         pagination = await service.paginate(
             *filters,
@@ -95,7 +94,9 @@ class FeatureController(HTMXMixin, Controller):
     ) -> Response | Template:
         form = FeatureForm(formdata=data)
         if form.validate():
-            await service.create(form.data)
+            feature = await service.create(form.data)
+            # 推荐位无独立前台页面 (无 path), 只删首页 (内置默认)
+            await invalidate_by_references(feature)
             return self.htmx_success("添加成功", redirect=data.get("url"))
         return self.htmx_render(
             template_name="feature_form.html.j2",
@@ -111,7 +112,9 @@ class FeatureController(HTMXMixin, Controller):
     ) -> Response:
         form = FeatureForm(formdata=data)
         if form.validate():
-            await service.update(form.data, item_id)
+            feature = await service.update(form.data, item_id)
+            # 推荐位无独立前台页面 (无 path), 只删首页 (内置默认)
+            await invalidate_by_references(feature)
             return self.htmx_success("更新成功", redirect=data.get("url"))
 
         return self.htmx_render(
@@ -148,8 +151,11 @@ class FeatureController(HTMXMixin, Controller):
         service: FeatureService,
     ) -> Response:
         form = FeatureDestroyForm(formdata=data)
+        feature = await service.get(item_id)
         if form.validate():
             await service.delete(item_id)
+            # 推荐位无独立前台页面 (无 path), 只删首页 (内置默认)
+            await invalidate_by_references(feature)
             return self.htmx_success("删除成功")
         return self.htmx_render(
             template_name="feature_destroy.html.j2",
@@ -171,14 +177,10 @@ class FeatureController(HTMXMixin, Controller):
         page: Annotated[int, QueryParameter(ge=1)] = 1,
         page_size: Annotated[int, QueryParameter(ge=1, le=100)] = 10,
     ) -> Template:
-        feature = service.to_schema(
-            await service.get(item_id), schema_type=FeatureSchema
-        )
+        feature = service.to_schema(await service.get(item_id), schema_type=FeatureSchema)
         pagination = await content_service.paginate(
             load=[Content.category, Content.creator],
-            statement=select(Content).where(
-                Content.features.any(Feature.id == item_id)
-            ),
+            statement=select(Content).where(Content.features.any(Feature.id == item_id)),
             page=page,
             page_size=page_size,
             schema_type=ContentLiteSchema,
@@ -202,18 +204,14 @@ class FeatureController(HTMXMixin, Controller):
         page: Annotated[int, QueryParameter(ge=1)] = 1,
         page_size: Annotated[int, QueryParameter(ge=1, le=100)] = 10,
     ) -> Template:
-        feature = service.to_schema(
-            await service.get(item_id), schema_type=FeatureSchema
-        )
+        feature = service.to_schema(await service.get(item_id), schema_type=FeatureSchema)
         statement = select(Content).where(
             Content.status == PublishStatus.PUBLISHED,
             ~Content.features.any(Feature.id == item_id),
         )
         filters = []
         if search:
-            filters.append(
-                SearchFilter(field_name="title", value=search, ignore_case=True)
-            )
+            filters.append(SearchFilter(field_name="title", value=search, ignore_case=True))
         pagination = await content_service.paginate(
             *filters,
             load=[Content.category, Content.creator],

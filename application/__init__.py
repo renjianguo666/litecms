@@ -10,14 +10,25 @@ from .exceptions import exception_handler
 from .media.storage import close_storage
 from .plugins import plugins
 from .router import route_handlers
+from .web.cache import start_cleanup_task, stop_cleanup_task
 
 __all__ = ["create_app"]
+
+
+async def _startup(app: Litestar) -> None:
+    """启动缓存过期清理任务 (FileStore 不自动 delete_expired, 防目录无限累积)。"""
+    app.state.cache_cleanup_task = start_cleanup_task()
+
+
+async def _shutdown(app: Litestar) -> None:
+    stop_cleanup_task(getattr(app.state, "cache_cleanup_task", None))
 
 
 def create_app() -> Litestar:
     return Litestar(
         route_handlers=route_handlers,
-        on_shutdown=[close_storage],
+        on_startup=[_startup],
+        on_shutdown=[close_storage, _shutdown],
         plugins=[
             plugins.structlog,
             plugins.htmx,

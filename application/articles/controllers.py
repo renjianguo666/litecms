@@ -29,11 +29,21 @@ from application.taxonomies.services import (
     SpecialService,
     TagService,
 )
+from application.web.cache import invalidate_by_references
 
 view_permission = PermissionGuard("articles:view", "查看文章", "文章管理")
 create_permission = PermissionGuard("articles:create", "添加文章", "文章管理")
 update_permission = PermissionGuard("articles:update", "更新文章", "文章管理")
 destroy_permission = PermissionGuard("articles:destroy", "删除文章", "文章管理")
+
+
+# 失效前需要读到文章的栏目/标签/专题 (update 失效新挂载页 / destroy 删除前失效), 故带全关系
+_ARTICLE_LOADS = [
+    selectinload(Article.category),
+    selectinload(Article.tags),
+    selectinload(Article.specials),
+    selectinload(Article.features),
+]
 
 
 class ArticleController(HTMXMixin, Controller):
@@ -120,7 +130,11 @@ class ArticleController(HTMXMixin, Controller):
         form.specials.choices = [(str(s.id), s.name) for s in all_specials]
         form.categories.choices = [(str(s.id), s.name) for s in categories]
         if form.validate():
-            await service.create_many_for_categories(form.data, creator=current_user)
+            articles = await service.create_many_for_categories(form.data, creator=current_user)
+            # 新增: 只刷新栏目第一页 + 首页 (内置)。新文章详情页还没缓存; 新文章挂的
+            # tag/专题页缺失新文章, 脏 300s TTL 自愈 (best-effort)
+            for a in articles:
+                await invalidate_by_references(a.category)
             return self.htmx_success("添加成功", redirect=data.get("url"))
         return self.htmx_render(
             template_name="article_form.html.j2",
@@ -187,16 +201,15 @@ class ArticleController(HTMXMixin, Controller):
         form.specials.choices = [(str(s.id), s.name) for s in all_specials]
         form.category.choices = [(str(c.id), c.name) for c in categories]
         if form.validate():
-            await service.update(
-                form.data,
-                item_id,
-                load=[
-                    selectinload(Article.category),
-                    selectinload(Article.tags),
-                    selectinload(Article.specials),
-                    selectinload(Article.features),
-                ],
-            )
+            # update 只失效新值关系: 旧栏目/旧标签 (改挂载场景) 由 TTL 300s 自愈, 不为此增复杂
+            updated = await service.update(form.data, item_id, load=_ARTICLE_LOADS, auto_refresh=False)
+            # 文章页 + 新挂的栏目/标签/专题页 + 首页 (内置)
+            await invalidate_by_references(updated)
+            await invalidate_by_references(updated.category)
+            for tag in updated.tags:
+                await invalidate_by_references(tag)
+            for special in updated.specials:
+                await invalidate_by_references(special)
             return self.htmx_success("更新成功", redirect=data.get("url"))
         return self.htmx_render(
             template_name="article_form.html.j2",
@@ -234,7 +247,15 @@ class ArticleController(HTMXMixin, Controller):
         service: ArticleService,
     ) -> Response:
         form = ArticleDestroyForm(data)
+        obj = await service.get(item_id, load=_ARTICLE_LOADS)
         if form.validate():
+            # 删除前挨个失效: delete 后关系会被清空, 只能在删除前取栏目/标签/专题页
+            await invalidate_by_references(obj)
+            await invalidate_by_references(obj.category)
+            for tag in obj.tags:
+                await invalidate_by_references(tag)
+            for special in obj.specials:
+                await invalidate_by_references(special)
             await service.delete(item_id)
             return self.htmx_success("删除成功")
         return self.htmx_render(

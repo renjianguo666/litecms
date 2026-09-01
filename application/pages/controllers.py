@@ -15,6 +15,7 @@ from application.guards import PermissionGuard
 from application.htmx import HTMXMixin
 from application.pages.forms import PageDestroyForm
 from application.pages.schemas import PageSchema
+from application.web.cache import invalidate_by_references
 
 from .forms import PageForm
 from .services import PageService
@@ -48,9 +49,7 @@ class PageController(HTMXMixin, Controller):
     ) -> Template:
         filters = []
         if search:
-            filters.append(
-                SearchFilter(field_name="title", value=search, ignore_case=True)
-            )
+            filters.append(SearchFilter(field_name="title", value=search, ignore_case=True))
 
         pagination = await service.paginate(
             *filters,
@@ -94,13 +93,14 @@ class PageController(HTMXMixin, Controller):
         form = PageForm(formdata=data)
         if form.validate():
             try:
-                await service.create(form.data)
+                page = await service.create(form.data)
             except PathConflictError as exc:
                 form.append_field_error("path", str(exc))
                 return self.htmx_render(
                     template_name="page_form.html.j2",
                     context={"form": form},
                 )
+            await invalidate_by_references(page)
             return self.htmx_success("添加成功", redirect=data.get("url"))
         return self.htmx_render(
             template_name="page_form.html.j2",
@@ -117,13 +117,14 @@ class PageController(HTMXMixin, Controller):
         form = PageForm(formdata=data)
         if form.validate():
             try:
-                await service.update(form.data, item_id)
+                page = await service.update(form.data, item_id)
             except PathConflictError as exc:
                 form.append_field_error("path", str(exc))
                 return self.htmx_render(
                     template_name="page_form.html.j2",
                     context={"form": form},
                 )
+            await invalidate_by_references(page)
             return self.htmx_success("更新成功", redirect=data.get("url"))
 
         return self.htmx_render(
@@ -160,8 +161,10 @@ class PageController(HTMXMixin, Controller):
         service: PageService,
     ) -> Response:
         form = PageDestroyForm(formdata=data)
+        page = await service.get(item_id)
         if form.validate():
             await service.delete(item_id)
+            await invalidate_by_references(page)
             return self.htmx_success("删除成功")
         return self.htmx_render(
             template_name="page_destroy.html.j2",

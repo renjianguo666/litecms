@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from functools import cached_property, lru_cache
 from pathlib import Path
+from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
@@ -14,6 +15,9 @@ from litestar.stores.file import FileStore
 from litestar.stores.registry import StoreRegistry
 from litestar.template.config import TemplateConfig
 from msgspec import Struct, convert
+
+if TYPE_CHECKING:
+    from litestar.types import HTTPScope
 
 # 1. 加载 .env 文件
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -130,6 +134,9 @@ class Config(Struct, rename="upper", dict=True):
                     default_do_cache_predicate(scope, status_code)
                     # 模板开发者模式开启时前台一律不缓存: 改模板即时生效, 不用重启
                     and not _template_dev_mode()
+                    # 登录会话请求不写缓存: 防止响应里的 set-cookie: session
+                    # 被存入共享缓存后原样回放给其他访客(缓存投毒/会话固定)
+                    and _cacheable_request(scope)
                 )
             ),
         )
@@ -174,6 +181,23 @@ def _template_dev_mode() -> bool:
     from application.themes.utils import get_template_dev_mode
 
     return get_template_dev_mode()
+
+
+def _cacheable_request(scope: HTTPScope) -> bool:
+    """请求未携带登录会话 cookie 时才允许写响应缓存。
+
+    响应缓存 key 只由 URL 决定, 匿名/登录访客共用同一份缓存; 而
+    ClientSide 会话的 cookie 本身就是身份凭证。若把登录用户的响应
+    存进缓存, 其 set-cookie: session=... 会被 Litestar 原样回放给
+    后续命中缓存的匿名访客, 造成会话固定/管理员身份泄漏。
+    """
+    for key, value in scope["headers"]:
+        if key == b"cookie":
+            for pair in value.split(b";"):
+                name, _, _ = pair.partition(b"=")
+                if name.strip() == b"session":
+                    return False
+    return True
 
 
 cfg = get_config()

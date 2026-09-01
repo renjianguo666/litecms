@@ -17,22 +17,21 @@ from application.contents.models import Content
 from application.contents.services import ContentService
 from application.guards import PermissionGuard
 from application.htmx import HTMXMixin
-from application.taxonomies.cache import invalidate_categories as invalidate
+from application.taxonomies.cache import invalidate_categories
 from application.taxonomies.forms import CategoryDestroyForm, CategoryForm
 from application.taxonomies.models import Category
 from application.taxonomies.schemas import CategorySchema
 from application.taxonomies.services import CategoryService
+from application.web.cache import invalidate_by_references
 
 view_permission = PermissionGuard("categories:view", "查看栏目", "栏目管理")
-create_permission = PermissionGuard(
-    "categories:create", "创建栏目", "栏目管理"
-)
-update_permission = PermissionGuard(
-    "categories:update", "更新栏目", "栏目管理"
-)
-destroy_permission = PermissionGuard(
-    "categories:destroy", "删除栏目", "栏目管理"
-)
+create_permission = PermissionGuard("categories:create", "创建栏目", "栏目管理")
+update_permission = PermissionGuard("categories:update", "更新栏目", "栏目管理")
+destroy_permission = PermissionGuard("categories:destroy", "删除栏目", "栏目管理")
+
+
+# 注: 栏目写操作只刷新目自身页第一页 + 首页 (url 计算式); 改名/移动影响祖先/子孙
+# 页, 由 TTL 自愈 (best-effort)。与分类树缓存 invalidate_categories() 是两回事, 两者都要调
 
 
 class CategoryController(HTMXMixin, Controller):
@@ -51,9 +50,7 @@ class CategoryController(HTMXMixin, Controller):
     ) -> Template:
         if search:
             categories = convert(
-                await service.get_many(
-                    SearchFilter(field_name="name", value=search, ignore_case=True)
-                ),
+                await service.get_many(SearchFilter(field_name="name", value=search, ignore_case=True)),
                 list[CategorySchema],
                 from_attributes=True,
             )
@@ -96,11 +93,12 @@ class CategoryController(HTMXMixin, Controller):
         form = CategoryForm(formdata=data)
         if form.validate():
             try:
-                await service.create(form.data)
+                category = await service.create(form.data)
             except PathConflictError as exc:
                 form.append_field_error("path", str(exc))
             else:
-                await invalidate()
+                await invalidate_categories()
+                await invalidate_by_references(category)
                 return self.htmx_success("添加成功", redirect=data.get("url"))
         return self.htmx_render(
             template_name="category_form.html.j2",
@@ -117,7 +115,7 @@ class CategoryController(HTMXMixin, Controller):
         form = CategoryForm(formdata=data)
         if form.validate():
             try:
-                await service.update(form.data, item_id)
+                updated = await service.update(form.data, item_id)
             except PathConflictError as exc:
                 form.append_field_error("path", str(exc))
             except DuplicateKeyError:
@@ -125,7 +123,9 @@ class CategoryController(HTMXMixin, Controller):
             except ClientException as exc:
                 form.append_field_error("parent_id", exc.detail)
             else:
-                await invalidate()
+                await invalidate_categories()
+                # 栏目页 + 首页 (内置); 改 path 后旧 url 页由 TTL 自愈
+                await invalidate_by_references(updated)
                 return self.htmx_success("更新成功", redirect=data.get("url"))
         return self.htmx_render(
             template_name="category_form.html.j2",
@@ -171,13 +171,15 @@ class CategoryController(HTMXMixin, Controller):
         service: CategoryService,
         data: URLEncodedBody[FormMultiDict],
     ) -> Response:
-        form = CategoryDestroyForm(data, obj=await service.get(item_id))
+        category = await service.get(item_id)
+        form = CategoryDestroyForm(data, obj=category)
         if await service.exists(Category.parent_id == item_id):
             form.form_errors.append("该栏目下还有子栏目，请先删除子栏目")
             form.disabled()
         elif form.validate():
             await service.delete(item_id)
-            await invalidate()
+            await invalidate_categories()
+            await invalidate_by_references(category)
             return self.htmx_success("删除成功")
         return self.htmx_render(
             template_name="category_destroy.html.j2",

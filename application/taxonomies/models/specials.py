@@ -43,11 +43,19 @@ class Special(UUIDv7AuditBase):
 
     @property
     def url(self) -> str:
-        return self.slug
+        """前台页面 URL: 与 path 同值 (/s/<slug>), 供模板/schema 直接用完整链接。"""
+        return self.path
 
     @property
     def absolute_url(self) -> str:
         return urljoin(get_settings("site_url", ""), self.url)
+
+    @property
+    def path(self) -> str:
+        """前台页面路径 (缓存失效用): 与 url 同值, 供 cache_key_path 统一取 entity.path。"""
+        from application.web.urls import build_special_url
+
+        return build_special_url(self.slug)
 
 
 class SpecialContent(AdvancedDeclarativeBase):
